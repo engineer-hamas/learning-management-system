@@ -1,0 +1,36 @@
+{
+  "name": "php-project",
+  "version": "1.0.0",
+  "description": "A simple, well-organized starting point for vanilla PHP applications without relying on a full-fledged framework.",
+  "main": "index.js",
+  "dependencies": {
+    "chokidar": "^4.0.3",
+    "detect-libc": "^2.1.2",
+    "immutable": "^5.1.5",
+    "is-extglob": "^2.1.1",
+    "is-glob": "^4.0.3",
+    "node-addon-api": "^7.1.1",
+    "picomatch": "^4.0.4",
+    "readdirp": "^4.1.2",
+    "sass": "^1.99.0",
+    "source-map-js": "^1.2.1"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "scripts": {
+    "build:css": "sass src/scss/style.scss public/css/style.css --no-source-map",
+    "watch:css": "sass --watch src/scss/style.scss public/css/style.css --no-source-map",
+    "dev": "bun run watch:css & php -S localhost:8000 -t public/",
+    "lint:php": "find src/ -name '*.php' -exec php -l {} \\; && php -l public/index.php",
+    "lint": "bun run lint:php"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "private": true,
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}

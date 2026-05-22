@@ -1,0 +1,160 @@
+@use 'variables' as *;
+
+.dashboard-body {
+    background-color: $bg-color;
+    color: $text-main;
+}
+
+.dashboard-layout {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    min-height: 100vh;
+}
+
+// Clean Sidebar
+.sidebar {
+    background-color: $surface-color;
+    border-right: 1px solid $border-color;
+    display: flex;
+    flex-direction: column;
+    padding: 24px 14px;
+
+    .sidebar-logo {
+        padding: 6px 12px 28px;
+        h3 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: $text-main;
+        }
+    }
+
+    .sidebar-menu {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        flex-grow: 1;
+    }
+
+    .menu-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        color: $text-muted;
+        text-decoration: none;
+        border-radius: 6px;
+        font-weight: 500;
+        font-size: 0.9rem;
+        transition: all 0.15s ease;
+
+        &:hover {
+            color: $text-main;
+            background-color: #f1f5f9;
+        }
+
+        &.active {
+            color: $primary-color;
+            background-color: #eff6ff;
+            font-weight: 600;
+        }
+
+        &.logout {
+            margin-top: auto;
+            color: $danger-color;
+
+            &:hover {
+                background-color: #fef2f2;
+            }
+        }
+    }
+}
+
+// Main Area
+.main-content {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow-y: auto;
+}
+
+// Clean Header
+.dashboard-header {
+    background-color: $surface-color;
+    border-bottom: 1px solid $border-color;
+    padding: 16px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+
+    .header-title {
+        h2 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: $text-main;
+        }
+    }
+
+    .header-profile {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+
+        .profile-name {
+            font-weight: 500;
+            font-size: 0.9rem;
+            color: $text-main;
+        }
+
+        .role-badge {
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+
+            &.badge-teacher {
+                background-color: #eff6ff;
+                color: $primary-color;
+                border: 1px solid #bfdbfe;
+            }
+
+            &.badge-student {
+                background-color: #ecfdf5;
+                color: #059669;
+                border: 1px solid #a7f3d0;
+            }
+        }
+    }
+}
+
+// Containers
+.dashboard-container {
+    padding: 32px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+// Clean Flat Welcome Card
+.welcome-card {
+    background-color: $surface-color;
+    border: 1px solid $border-color;
+    padding: 24px;
+    border-radius: 8px;
+
+    h1 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        margin-bottom: 4px;
+        color: $text-main;
+    }
+    p {
+        color: $text-muted;
+        font-size: 0.95rem;
+    }
+}
