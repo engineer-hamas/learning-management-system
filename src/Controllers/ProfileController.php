@@ -1,0 +1,451 @@
+<?php
+namespace App\Controllers;
+
+use App\Core\Controller;
+use App\Core\Database;
+use App\Core\Request;
+use App\Core\Response;
+
+/**
+ * Class ProfileController
+ * 
+ * Manages user profile settings, secure file uploads, role-specific mappings, and account security.
+ */
+class ProfileController extends Controller {
+    private $db;
+
+    public function __construct() {
+        $this->db = Database::getConnection();
+    }
+
+    /**
+     * Helper to authenticate current session
+     */
+    private function authenticateSession(): void {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        if (!isset($_SESSION['user_id'])) {
+            $this->redirect('/login');
+        }
+    }
+
+    /**
+     * Show Profile Settings Page
+     * 
+     * @param Request $request
+     * @param Response $response
+     */
+    public function showSettings(Request $request, Response $response): void {
+        $this->authenticateSession();
+
+        $userId = $_SESSION['user_id'];
+
+        // 1. Fetch fresh user info from the database
+        $stmt = $this->db->prepare("
+            SELECT id, name, email, role, avatar_path, phone, bio, department_id, 
+                   title, office_hours, specialization, 
+                   student_id, expected_graduation, study_style,
+                   notify_email, notify_class_alerts, notify_marketing
+            FROM users WHERE id = ?
+        ");
+        if (!$stmt) {
+            die("Database error during profile fetch: " . $this->db->error);
+        }
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $userResult = $stmt->get_result();
+        
+        if ($userResult->num_rows !== 1) {
+            die("User record not found.");
+        }
+        $user = $userResult->fetch_assoc();
+        $stmt->close();
+
+        // 2. Fetch all departments (dynamic majors/departments list)
+        $depResult = $this->db->query("SELECT id, name, code FROM departments ORDER BY name ASC");
+        $departments = [];
+        if ($depResult) {
+            while ($row = $depResult->fetch_assoc()) {
+                $departments[] = $row;
+            }
+        }
+
+        // 3. Fetch all subjects offered
+        $subResult = $this->db->query("SELECT id, department_id, name, code, credits FROM subjects ORDER BY code ASC");
+        $subjects = [];
+        if ($subResult) {
+            while ($row = $subResult->fetch_assoc()) {
+                $subjects[] = $row;
+            }
+        }
+
+        // 4. Fetch user's checked subjects depending on role
+        $userSubjectIds = [];
+        if ($user['role'] === 'teacher') {
+            $subStmt = $this->db->prepare("SELECT subject_id FROM teacher_subjects WHERE teacher_id = ?");
+        } else {
+            $subStmt = $this->db->prepare("SELECT subject_id FROM student_subjects WHERE student_id = ?");
+        }
+        
+        if ($subStmt) {
+            $subStmt->bind_param("i", $userId);
+            $subStmt->execute();
+            $subRes = $subStmt->get_result();
+            while ($row = $subRes->fetch_assoc()) {
+                $userSubjectIds[] = (int)$row['subject_id'];
+            }
+            $subStmt->close();
+        }
+
+        // 5. Gather notification messages and active tabs from flash session variables
+        $error = $_SESSION['settings_error'] ?? '';
+        $success = $_SESSION['settings_success'] ?? '';
+        $activeTab = $_SESSION['settings_active_tab'] ?? 'general';
+        unset($_SESSION['settings_error'], $_SESSION['settings_success'], $_SESSION['settings_active_tab']);
+
+        // 6. Render
+        $this->render('settings', [
+            'user' => $user,
+            'userRole' => $user['role'],
+            'userName' => $user['name'],
+            'userEmail' => $user['email'],
+            'userAvatar' => $user['avatar_path'],
+            'departments' => $departments,
+            'subjects' => $subjects,
+            'userSubjectIds' => $userSubjectIds,
+            'error' => $error,
+            'success' => $success,
+            'activeTab' => $activeTab
+        ]);
+    }
+
+    /**
+     * Handle Profile Information Update
+     * 
+     * @param Request $request
+     * @param Response $response
+     */
+    public function handleProfileUpdate(Request $request, Response $response): void {
+        $this->authenticateSession();
+
+        if (!$request->isPost()) {
+            $this->redirect('/settings');
+        }
+
+        $userId = $_SESSION['user_id'];
+        $role = $_SESSION['user_role'];
+
+        if (isset($_POST['is_general_profile'])) {
+            // ==========================================
+            // MODE A: Update General Profile Information
+            // ==========================================
+            $name = $request->cleanPost('name');
+            $email = $request->cleanPost('email');
+            $phone = $request->cleanPost('phone');
+            $bio = $request->cleanPost('bio');
+
+            // Basic fields validations
+            if (empty($name) || empty($email)) {
+                $_SESSION['settings_error'] = "Name and email are required fields.";
+                $_SESSION['settings_active_tab'] = "general";
+                $this->redirect('/settings');
+            }
+
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $_SESSION['settings_error'] = "Invalid email format.";
+                $_SESSION['settings_active_tab'] = "general";
+                $this->redirect('/settings');
+            }
+
+            // Check email uniqueness for other users
+            $stmt = $this->db->prepare("SELECT id FROM users WHERE email = ? AND id != ?");
+            $stmt->bind_param("si", $email, $userId);
+            $stmt->execute();
+            $stmt->store_result();
+            if ($stmt->num_rows > 0) {
+                $_SESSION['settings_error'] = "This email is already in use by another account.";
+                $_SESSION['settings_active_tab'] = "general";
+                $stmt->close();
+                $this->redirect('/settings');
+            }
+            $stmt->close();
+
+            // 1. Process custom Profile Image Upload
+            $avatarPath = null;
+            if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] !== UPLOAD_ERR_NO_FILE) {
+                $file = $_FILES['avatar'];
+
+                if ($file['error'] !== UPLOAD_ERR_OK) {
+                    $_SESSION['settings_error'] = "File upload error code: " . $file['error'];
+                    $_SESSION['settings_active_tab'] = "general";
+                    $this->redirect('/settings');
+                }
+
+                // Size Guard (2MB Limit)
+                if ($file['size'] > 2 * 1024 * 1024) {
+                    $_SESSION['settings_error'] = "Profile image must be smaller than 2MB.";
+                    $_SESSION['settings_active_tab'] = "general";
+                    $this->redirect('/settings');
+                }
+
+                // MIME Type Guard
+                $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+                $fileMime = mime_content_type($file['tmp_name']);
+                if (!in_array($fileMime, $allowedMimeTypes)) {
+                    $_SESSION['settings_error'] = "Invalid image file format. Allowed formats: JPG, PNG, GIF, WEBP.";
+                    $_SESSION['settings_active_tab'] = "general";
+                    $this->redirect('/settings');
+                }
+
+                // Rename and move securely
+                $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
+                if (empty($ext)) {
+                    $ext = 'jpg';
+                }
+                $secureFilename = uniqid('avatar_', true) . '.' . $ext;
+                
+                $publicUploadPath = '/uploads/avatars/' . $secureFilename;
+                $absoluteUploadPath = dirname(dirname(__DIR__)) . '/public' . $publicUploadPath;
+
+                if (move_uploaded_file($file['tmp_name'], $absoluteUploadPath)) {
+                    // Delete previous avatar file from disk if it exists
+                    $prevStmt = $this->db->prepare("SELECT avatar_path FROM users WHERE id = ?");
+                    $prevStmt->bind_param("i", $userId);
+                    $prevStmt->execute();
+                    $prevRes = $prevStmt->get_result();
+                    if ($prevRes->num_rows === 1) {
+                        $prevUser = $prevRes->fetch_assoc();
+                        $prevPath = $prevUser['avatar_path'];
+                        if (!empty($prevPath)) {
+                            $prevFullPath = dirname(dirname(__DIR__)) . '/public' . $prevPath;
+                            if (file_exists($prevFullPath)) {
+                                @unlink($prevFullPath);
+                            }
+                        }
+                    }
+                    $prevStmt->close();
+
+                    $avatarPath = $publicUploadPath;
+                } else {
+                    $_SESSION['settings_error'] = "Failed to save profile picture file. Please check folder permissions.";
+                    $_SESSION['settings_active_tab'] = "general";
+                    $this->redirect('/settings');
+                }
+            }
+
+            // Update database record for general fields
+            if ($avatarPath !== null) {
+                $updateQuery = "UPDATE users SET name = ?, email = ?, phone = ?, bio = ?, avatar_path = ? WHERE id = ?";
+                $stmt = $this->db->prepare($updateQuery);
+                $stmt->bind_param("sssssi", $name, $email, $phone, $bio, $avatarPath, $userId);
+            } else {
+                $updateQuery = "UPDATE users SET name = ?, email = ?, phone = ?, bio = ? WHERE id = ?";
+                $stmt = $this->db->prepare($updateQuery);
+                $stmt->bind_param("ssssi", $name, $email, $phone, $bio, $userId);
+            }
+
+            if (!$stmt->execute()) {
+                $_SESSION['settings_error'] = "Failed to update profile settings: " . $this->db->error;
+                $_SESSION['settings_active_tab'] = "general";
+                $stmt->close();
+                $this->redirect('/settings');
+            }
+            $stmt->close();
+
+            // Update session values
+            $_SESSION['user_name'] = $name;
+            $_SESSION['user_email'] = $email;
+
+            $_SESSION['settings_success'] = "General profile details successfully saved.";
+            $_SESSION['settings_active_tab'] = "general";
+            $this->redirect('/settings');
+        } else {
+            // ==========================================
+            // MODE B: Update Professional / Academic
+            // ==========================================
+            $depId = $request->cleanPost('department_id');
+            $departmentId = !empty($depId) ? (int)$depId : null;
+
+            if ($role === 'teacher') {
+                $title = $request->cleanPost('title');
+                $officeHours = $request->cleanPost('office_hours');
+                $specialization = $request->cleanPost('specialization');
+
+                $updateQuery = "
+                    UPDATE users SET 
+                        department_id = ?, title = ?, office_hours = ?, specialization = ?
+                    WHERE id = ?
+                ";
+                $stmt = $this->db->prepare($updateQuery);
+                $stmt->bind_param("isssi", $departmentId, $title, $officeHours, $specialization, $userId);
+            } else {
+                $studentId = $request->cleanPost('student_id');
+                $expectedGraduation = $request->cleanPost('expected_graduation');
+                $studyStyle = $request->cleanPost('study_style');
+
+                $updateQuery = "
+                    UPDATE users SET 
+                        department_id = ?, student_id = ?, expected_graduation = ?, study_style = ?
+                    WHERE id = ?
+                ";
+                $stmt = $this->db->prepare($updateQuery);
+                $stmt->bind_param("isssi", $departmentId, $studentId, $expectedGraduation, $studyStyle, $userId);
+            }
+
+            if (!$stmt->execute()) {
+                $_SESSION['settings_error'] = "Failed to update academic/professional settings: " . $this->db->error;
+                $_SESSION['settings_active_tab'] = $role === 'teacher' ? 'teacher-profile' : 'student-profile';
+                $stmt->close();
+                $this->redirect('/settings');
+            }
+            $stmt->close();
+
+            // Update many-to-many relationship mapping for dynamic subjects checkmarks
+            $checkedSubjectIds = isset($_POST['subjects']) ? array_map('intval', $_POST['subjects']) : [];
+
+            if ($role === 'teacher') {
+                // Teacher mapping synchronization
+                $delStmt = $this->db->prepare("DELETE FROM teacher_subjects WHERE teacher_id = ?");
+                $delStmt->bind_param("i", $userId);
+                $delStmt->execute();
+                $delStmt->close();
+
+                if (!empty($checkedSubjectIds)) {
+                    $insStmt = $this->db->prepare("INSERT INTO teacher_subjects (teacher_id, subject_id) VALUES (?, ?)");
+                    foreach ($checkedSubjectIds as $subId) {
+                        $insStmt->bind_param("ii", $userId, $subId);
+                        $insStmt->execute();
+                    }
+                    $insStmt->close();
+                }
+            } else {
+                // Student mapping synchronization
+                $delStmt = $this->db->prepare("DELETE FROM student_subjects WHERE student_id = ?");
+                $delStmt->bind_param("i", $userId);
+                $delStmt->execute();
+                $delStmt->close();
+
+                if (!empty($checkedSubjectIds)) {
+                    $insStmt = $this->db->prepare("INSERT INTO student_subjects (student_id, subject_id) VALUES (?, ?)");
+                    foreach ($checkedSubjectIds as $subId) {
+                        $insStmt->bind_param("ii", $userId, $subId);
+                        $insStmt->execute();
+                    }
+                    $insStmt->close();
+                }
+            }
+
+            $_SESSION['settings_success'] = "Academic/Professional details successfully saved.";
+            $_SESSION['settings_active_tab'] = $role === 'teacher' ? 'teacher-profile' : 'student-profile';
+            $this->redirect('/settings');
+        }
+    }
+
+    /**
+     * Handle Password Reset Action
+     * 
+     * @param Request $request
+     * @param Response $response
+     */
+    public function handlePasswordUpdate(Request $request, Response $response): void {
+        $this->authenticateSession();
+
+        if (!$request->isPost()) {
+            $this->redirect('/settings');
+        }
+
+        $userId = $_SESSION['user_id'];
+
+        $currentPassword = $request->post('current_password');
+        $newPassword = $request->post('new_password');
+        $confirmPassword = $request->post('confirm_password');
+
+        if (empty($currentPassword) || empty($newPassword) || empty($confirmPassword)) {
+            $_SESSION['settings_error'] = "All password fields are required.";
+            $_SESSION['settings_active_tab'] = "security";
+            $this->redirect('/settings');
+        }
+
+        if ($newPassword !== $confirmPassword) {
+            $_SESSION['settings_error'] = "New passwords do not match.";
+            $_SESSION['settings_active_tab'] = "security";
+            $this->redirect('/settings');
+        }
+
+        if (strlen($newPassword) < 8) {
+            $_SESSION['settings_error'] = "New password must be at least 8 characters long.";
+            $_SESSION['settings_active_tab'] = "security";
+            $this->redirect('/settings');
+        }
+
+        // Fetch original password hash to verify
+        $stmt = $this->db->prepare("SELECT password FROM users WHERE id = ?");
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        if ($res->num_rows !== 1) {
+            die("User details not found.");
+        }
+        $user = $res->fetch_assoc();
+        $stmt->close();
+
+        if (!password_verify($currentPassword, $user['password'])) {
+            $_SESSION['settings_error'] = "Current password is incorrect.";
+            $_SESSION['settings_active_tab'] = "security";
+            $this->redirect('/settings');
+        }
+
+        // Hashing and UPDATE execution
+        $newHash = password_hash($newPassword, PASSWORD_DEFAULT);
+        $upStmt = $this->db->prepare("UPDATE users SET password = ? WHERE id = ?");
+        $upStmt->bind_param("si", $newHash, $userId);
+        
+        if ($upStmt->execute()) {
+            $_SESSION['settings_success'] = "Password changed successfully.";
+        } else {
+            $_SESSION['settings_error'] = "Failed to update password: " . $this->db->error;
+        }
+        $upStmt->close();
+
+        $_SESSION['settings_active_tab'] = "security";
+        $this->redirect('/settings');
+    }
+
+    /**
+     * Handle Notification preference changes
+     * 
+     * @param Request $request
+     * @param Response $response
+     */
+    public function handleNotificationsUpdate(Request $request, Response $response): void {
+        $this->authenticateSession();
+
+        if (!$request->isPost()) {
+            $this->redirect('/settings');
+        }
+
+        $userId = $_SESSION['user_id'];
+
+        $notifyEmail = isset($_POST['notify_email']) ? 1 : 0;
+        $notifyClassAlerts = isset($_POST['notify_class_alerts']) ? 1 : 0;
+        $notifyMarketing = isset($_POST['notify_marketing']) ? 1 : 0;
+
+        $stmt = $this->db->prepare("
+            UPDATE users 
+            SET notify_email = ?, notify_class_alerts = ?, notify_marketing = ? 
+            WHERE id = ?
+        ");
+        $stmt->bind_param("iiii", $notifyEmail, $notifyClassAlerts, $notifyMarketing, $userId);
+
+        if ($stmt->execute()) {
+            $_SESSION['settings_success'] = "Notification preferences updated.";
+        } else {
+            $_SESSION['settings_error'] = "Failed to update notification settings: " . $this->db->error;
+        }
+        $stmt->close();
+
+        $_SESSION['settings_active_tab'] = "notifications";
+        $this->redirect('/settings');
+    }
+}

@@ -14,6 +14,7 @@ require_once __DIR__ . '/../src/Core/Autoloader.php';
 use App\Core\Router;
 use App\Controllers\AuthController;
 use App\Controllers\DashboardController;
+use App\Controllers\ProfileController;
 
 // 4. Initialize Programmatic OOP Router
 $router = new Router();
@@ -40,6 +41,12 @@ $router->get('/logout', [AuthController::class, 'handleLogout']);
 
 // Dashboard Route
 $router->get('/dashboard', [DashboardController::class, 'index']);
+
+// Settings Routes
+$router->get('/settings', [ProfileController::class, 'showSettings']);
+$router->post('/settings/profile', [ProfileController::class, 'handleProfileUpdate']);
+$router->post('/settings/password', [ProfileController::class, 'handlePasswordUpdate']);
+$router->post('/settings/notifications', [ProfileController::class, 'handleNotificationsUpdate']);
 
 // 5. Dispatch current route
 $router->dispatch(
