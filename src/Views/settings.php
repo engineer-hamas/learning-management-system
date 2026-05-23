@@ -33,6 +33,9 @@
                 <a href="/dashboard" class="menu-item" data-tooltip="Dashboard">
                     <span class="icon">🏠</span> <span class="menu-text">Dashboard</span>
                 </a>
+                <a href="/enrollments" class="menu-item" data-tooltip="<?= e($userRole) === 'teacher' ? 'Enrollments' : 'Courses' ?>">
+                    <span class="icon">🎓</span> <span class="menu-text"><?= e($userRole) === 'teacher' ? 'Enrollments' : 'Courses' ?></span>
+                </a>
                 <a href="/settings" class="menu-item active" data-tooltip="Settings">
                     <span class="icon">⚙️</span> <span class="menu-text">Settings</span>
                 </a>

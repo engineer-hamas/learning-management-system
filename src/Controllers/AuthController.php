@@ -94,21 +94,38 @@ class AuthController extends Controller {
         // Securely hash password
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 
-        // Insert new user record
-        $stmt = $this->db->prepare("INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)");
-        if (!$stmt) {
-            $_SESSION['register_error'] = "Database insertion failed. Please try again.";
-            $this->redirect('/register');
-        }
-        $stmt->bind_param("ssss", $name, $email, $hashedPassword, $role);
-
-        if ($stmt->execute()) {
+        // Insert new user record inside a transaction
+        $this->db->begin_transaction();
+        
+        try {
+            $stmt = $this->db->prepare("INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)");
+            if (!$stmt) throw new \Exception("User statement preparation failed.");
+            
+            $stmt->bind_param("ssss", $name, $email, $hashedPassword, $role);
+            if (!$stmt->execute()) throw new \Exception("User insertion failed.");
+            
+            $newUserId = $this->db->insert_id;
+            $stmt->close();
+            
+            // Create corresponding role profile
+            if ($role === 'teacher') {
+                $tStmt = $this->db->prepare("INSERT INTO teachers (user_id) VALUES (?)");
+                $tStmt->bind_param("i", $newUserId);
+                if (!$tStmt->execute()) throw new \Exception("Teacher profile creation failed.");
+                $tStmt->close();
+            } else {
+                $sStmt = $this->db->prepare("INSERT INTO students (user_id) VALUES (?)");
+                $sStmt->bind_param("i", $newUserId);
+                if (!$sStmt->execute()) throw new \Exception("Student profile creation failed.");
+                $sStmt->close();
+            }
+            
+            $this->db->commit();
             $_SESSION['register_success'] = "Registration successful! You can now log in.";
-            $stmt->close();
             $this->redirect('/login');
-        } else {
-            $_SESSION['register_error'] = "Registration failed. Please try again.";
-            $stmt->close();
+        } catch (\Exception $e) {
+            $this->db->rollback();
+            $_SESSION['register_error'] = "Registration failed: " . $e->getMessage();
             $this->redirect('/register');
         }
     }

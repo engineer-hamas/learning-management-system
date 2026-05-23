@@ -43,11 +43,14 @@ class ProfileController extends Controller {
 
         // 1. Fetch fresh user info from the database
         $stmt = $this->db->prepare("
-            SELECT id, name, email, role, avatar_path, phone, bio, department_id, 
-                   title, office_hours, specialization, 
-                   student_id, expected_graduation, study_style,
-                   notify_email, notify_class_alerts, notify_marketing
-            FROM users WHERE id = ?
+            SELECT u.id, u.name, u.email, u.role, u.avatar_path, u.phone, u.bio, 
+                   u.notify_email, u.notify_class_alerts, u.notify_marketing,
+                   t.department_id as t_dept, t.title, t.office_hours, t.specialization,
+                   s.department_id as s_dept, s.student_id, s.expected_graduation, s.study_style
+            FROM users u
+            LEFT JOIN teachers t ON u.id = t.user_id
+            LEFT JOIN students s ON u.id = s.user_id
+            WHERE u.id = ?
         ");
         if (!$stmt) {
             die("Database error during profile fetch: " . $this->db->error);
@@ -61,6 +64,13 @@ class ProfileController extends Controller {
         }
         $user = $userResult->fetch_assoc();
         $stmt->close();
+        
+        // Map the correct department_id based on role
+        if ($user['role'] === 'teacher') {
+            $user['department_id'] = $user['t_dept'];
+        } else {
+            $user['department_id'] = $user['s_dept'];
+        }
 
         // 2. Fetch all departments (dynamic majors/departments list)
         $depResult = $this->db->query("SELECT id, name, code FROM departments ORDER BY name ASC");
@@ -85,7 +95,7 @@ class ProfileController extends Controller {
         if ($user['role'] === 'teacher') {
             $subStmt = $this->db->prepare("SELECT subject_id FROM teacher_subjects WHERE teacher_id = ?");
         } else {
-            $subStmt = $this->db->prepare("SELECT subject_id FROM student_subjects WHERE student_id = ?");
+            $subStmt = $this->db->prepare("SELECT subject_id FROM enrollments WHERE student_id = ?");
         }
         
         if ($subStmt) {
@@ -273,9 +283,9 @@ class ProfileController extends Controller {
                 $specialization = $request->cleanPost('specialization');
 
                 $updateQuery = "
-                    UPDATE users SET 
+                    UPDATE teachers SET 
                         department_id = ?, title = ?, office_hours = ?, specialization = ?
-                    WHERE id = ?
+                    WHERE user_id = ?
                 ";
                 $stmt = $this->db->prepare($updateQuery);
                 $stmt->bind_param("isssi", $departmentId, $title, $officeHours, $specialization, $userId);
@@ -285,9 +295,9 @@ class ProfileController extends Controller {
                 $studyStyle = $request->cleanPost('study_style');
 
                 $updateQuery = "
-                    UPDATE users SET 
+                    UPDATE students SET 
                         department_id = ?, student_id = ?, expected_graduation = ?, study_style = ?
-                    WHERE id = ?
+                    WHERE user_id = ?
                 ";
                 $stmt = $this->db->prepare($updateQuery);
                 $stmt->bind_param("isssi", $departmentId, $studentId, $expectedGraduation, $studyStyle, $userId);
@@ -320,20 +330,8 @@ class ProfileController extends Controller {
                     $insStmt->close();
                 }
             } else {
-                // Student mapping synchronization
-                $delStmt = $this->db->prepare("DELETE FROM student_subjects WHERE student_id = ?");
-                $delStmt->bind_param("i", $userId);
-                $delStmt->execute();
-                $delStmt->close();
-
-                if (!empty($checkedSubjectIds)) {
-                    $insStmt = $this->db->prepare("INSERT INTO student_subjects (student_id, subject_id) VALUES (?, ?)");
-                    foreach ($checkedSubjectIds as $subId) {
-                        $insStmt->bind_param("ii", $userId, $subId);
-                        $insStmt->execute();
-                    }
-                    $insStmt->close();
-                }
+                // Students can no longer modify their enrollments via settings.
+                // This is strictly managed by teachers.
             }
 
             $_SESSION['settings_success'] = "Academic/Professional details successfully saved.";

@@ -1,6 +1,14 @@
 <?php
 // Main Application Router (Front Controller)
 
+// Serve static files when running under the built-in PHP web server
+if (php_sapi_name() === 'cli-server') {
+    $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+    if (is_file(__DIR__ . $path)) {
+        return false;
+    }
+}
+
 // 1. Load application configuration (includes session startup)
 require_once __DIR__ . '/../config/config.php';
 
@@ -15,6 +23,8 @@ use App\Core\Router;
 use App\Controllers\AuthController;
 use App\Controllers\DashboardController;
 use App\Controllers\ProfileController;
+use App\Controllers\EnrollmentController;
+use App\Controllers\CourseController;
 
 // 4. Initialize Programmatic OOP Router
 $router = new Router();
@@ -41,6 +51,23 @@ $router->get('/logout', [AuthController::class, 'handleLogout']);
 
 // Dashboard Route
 $router->get('/dashboard', [DashboardController::class, 'index']);
+
+// Enrollments Routes
+$router->get('/enrollments', [EnrollmentController::class, 'index']);
+$router->post('/enrollments/add', [EnrollmentController::class, 'enrollStudent']);
+$router->post('/enrollments/remove', [EnrollmentController::class, 'removeStudent']);
+
+// Course Content Routes
+$router->get('/course', [CourseController::class, 'show']);
+$router->post('/course/material', [CourseController::class, 'addMaterial']);
+$router->post('/course/assignment', [CourseController::class, 'addAssignment']);
+$router->post('/course/exam', [CourseController::class, 'addExam']);
+$router->post('/course/quiz', [CourseController::class, 'addQuiz']);
+
+$router->post('/course/material/delete', [CourseController::class, 'deleteMaterial']);
+$router->post('/course/assignment/delete', [CourseController::class, 'deleteAssignment']);
+$router->post('/course/exam/delete', [CourseController::class, 'deleteExam']);
+$router->post('/course/quiz/delete', [CourseController::class, 'deleteQuiz']);
 
 // Settings Routes
 $router->get('/settings', [ProfileController::class, 'showSettings']);
