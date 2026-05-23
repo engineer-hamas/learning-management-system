@@ -306,4 +306,169 @@ class CourseController extends Controller {
         $stmt->close();
         $this->redirect('/course?id=' . $courseId);
     }
+
+    public function showAttendance(Request $request, Response $response): void {
+        $courseId = (int)$request->get('id');
+        if (!$this->verifyTeacherAccess($courseId) && !$this->verifyStudentEnrollment($courseId)) {
+            $this->redirect('/dashboard');
+        }
+
+        $stmt = $this->db->prepare("SELECT id, name, code, description FROM subjects WHERE id = ?");
+        $stmt->bind_param("i", $courseId);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $course = $res->fetch_assoc();
+        $stmt->close();
+
+        if (!$course) $this->redirect('/dashboard');
+
+        $data = [
+            'userRole' => $_SESSION['role'],
+            'userName' => $_SESSION['name'],
+            'course' => $course,
+        ];
+
+        // Avatar
+        $avatarStmt = $this->db->prepare("SELECT avatar_path FROM users WHERE id = ?");
+        $avatarStmt->bind_param("i", $_SESSION['user_id']);
+        $avatarStmt->execute();
+        $avatarRes = $avatarStmt->get_result();
+        $data['userAvatar'] = ($avatarRes && $avatarRes->num_rows > 0) ? $avatarRes->fetch_assoc()['avatar_path'] : null;
+        $avatarStmt->close();
+
+        if ($_SESSION['role'] === 'teacher') {
+            // Get all enrolled students
+            $stuStmt = $this->db->prepare("SELECT u.id, u.name, u.email, u.roll_no, u.avatar_path FROM users u JOIN enrollments e ON u.id = e.student_id WHERE e.subject_id = ? ORDER BY u.name ASC");
+            $stuStmt->bind_param("i", $courseId);
+            $stuStmt->execute();
+            $data['students'] = $stuStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+            $stuStmt->close();
+
+            // Get attendance dates
+            $dateStmt = $this->db->prepare("SELECT DISTINCT attendance_date FROM attendance WHERE subject_id = ? ORDER BY attendance_date DESC LIMIT 15");
+            $dateStmt->bind_param("i", $courseId);
+            $dateStmt->execute();
+            $dates = [];
+            $res = $dateStmt->get_result();
+            while($r = $res->fetch_assoc()) $dates[] = $r['attendance_date'];
+            $dateStmt->close();
+            $data['attendance_dates'] = $dates;
+
+            // Get attendance matrix
+            $matrix = [];
+            if (!empty($dates)) {
+                $matStmt = $this->db->prepare("SELECT student_id, attendance_date, status FROM attendance WHERE subject_id = ? AND attendance_date >= ? AND attendance_date <= ?");
+                $minDate = end($dates);
+                $maxDate = $dates[0];
+                $matStmt->bind_param("iss", $courseId, $minDate, $maxDate);
+                $matStmt->execute();
+                $res = $matStmt->get_result();
+                while($r = $res->fetch_assoc()) {
+                    $matrix[$r['student_id']][$r['attendance_date']] = $r['status'];
+                }
+                $matStmt->close();
+            }
+            $data['attendance_matrix'] = $matrix;
+
+        } else {
+            // Student View
+            $logStmt = $this->db->prepare("SELECT attendance_date as date, status FROM attendance WHERE subject_id = ? AND student_id = ? ORDER BY attendance_date DESC");
+            $logStmt->bind_param("ii", $courseId, $_SESSION['user_id']);
+            $logStmt->execute();
+            $data['attendance_log'] = $logStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+            $logStmt->close();
+
+            $total = count($data['attendance_log']);
+            $present = $late = $absent = 0;
+            foreach ($data['attendance_log'] as $l) {
+                if ($l['status'] === 'present') $present++;
+                if ($l['status'] === 'late') $late++;
+                if ($l['status'] === 'absent') $absent++;
+            }
+            $percentage = $total > 0 ? round((($present + $late) / $total) * 100) : 100;
+
+            $data['attendance_summary'] = [
+                'total' => $total,
+                'present' => $present,
+                'late' => $late,
+                'absent' => $absent,
+                'percentage' => $percentage
+            ];
+        }
+
+        $this->render('attendance', $data);
+    }
+
+    public function takeAttendance(Request $request, Response $response): void {
+        $courseId = (int)$request->get('id');
+        if (!$this->verifyTeacherAccess($courseId)) $this->redirect('/dashboard');
+
+        $stmt = $this->db->prepare("SELECT id, name, code, description FROM subjects WHERE id = ?");
+        $stmt->bind_param("i", $courseId);
+        $stmt->execute();
+        $course = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$course) $this->redirect('/dashboard');
+
+        $data = [
+            'userRole' => $_SESSION['role'],
+            'userName' => $_SESSION['name'],
+            'course' => $course,
+        ];
+
+        // Avatar
+        $avatarStmt = $this->db->prepare("SELECT avatar_path FROM users WHERE id = ?");
+        $avatarStmt->bind_param("i", $_SESSION['user_id']);
+        $avatarStmt->execute();
+        $avatarRes = $avatarStmt->get_result();
+        $data['userAvatar'] = ($avatarRes && $avatarRes->num_rows > 0) ? $avatarRes->fetch_assoc()['avatar_path'] : null;
+        $avatarStmt->close();
+
+        // Get all enrolled students
+        $stuStmt = $this->db->prepare("SELECT u.id, u.name, u.email, u.roll_no, u.avatar_path FROM users u JOIN enrollments e ON u.id = e.student_id WHERE e.subject_id = ? ORDER BY u.name ASC");
+        $stuStmt->bind_param("i", $courseId);
+        $stuStmt->execute();
+        $data['enrolled_students'] = $stuStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stuStmt->close();
+
+        $this->render('take-attendance', $data);
+    }
+
+    public function markAttendance(Request $request, Response $response): void {
+        $courseId = (int)$request->post('subject_id');
+        if (!$this->verifyTeacherAccess($courseId)) $this->redirect('/dashboard');
+
+        $date = $request->post('attendance_date');
+        $attendanceData = $request->post('attendance') ?? []; // array of student_id => status
+
+        if (!empty($date) && !empty($attendanceData)) {
+            // Check if record exists
+            $checkStmt = $this->db->prepare("SELECT id FROM attendance WHERE subject_id = ? AND student_id = ? AND attendance_date = ?");
+            $updateStmt = $this->db->prepare("UPDATE attendance SET status = ? WHERE id = ?");
+            $insertStmt = $this->db->prepare("INSERT INTO attendance (subject_id, student_id, attendance_date, status) VALUES (?, ?, ?, ?)");
+
+            foreach ($attendanceData as $studentId => $status) {
+                $studentId = (int)$studentId;
+                if (!in_array($status, ['present', 'late', 'absent'])) continue;
+
+                $checkStmt->bind_param("iis", $courseId, $studentId, $date);
+                $checkStmt->execute();
+                $res = $checkStmt->get_result();
+                
+                if ($row = $res->fetch_assoc()) {
+                    $updateStmt->bind_param("si", $status, $row['id']);
+                    $updateStmt->execute();
+                } else {
+                    $insertStmt->bind_param("iiss", $courseId, $studentId, $date, $status);
+                    $insertStmt->execute();
+                }
+            }
+            $checkStmt->close();
+            $updateStmt->close();
+            $insertStmt->close();
+        }
+
+        $this->redirect('/course/attendance?id=' . $courseId);
+    }
 }

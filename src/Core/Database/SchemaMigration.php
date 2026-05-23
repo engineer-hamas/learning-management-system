@@ -160,6 +160,20 @@ class SchemaMigration {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         ");
 
+        $conn->query("
+            CREATE TABLE IF NOT EXISTS `attendance` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `subject_id` INT NOT NULL,
+                `student_id` INT NOT NULL,
+                `date` DATE NOT NULL,
+                `status` ENUM('present', 'absent', 'late') NOT NULL DEFAULT 'present',
+                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY `unique_attendance` (`subject_id`, `student_id`, `date`),
+                FOREIGN KEY (`subject_id`) REFERENCES `subjects`(`id`) ON DELETE CASCADE,
+                FOREIGN KEY (`student_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        ");
+
         // Create upload directory
         $uploadDir = dirname(dirname(dirname(__DIR__))) . '/public/uploads/avatars';
         if (!is_dir($uploadDir)) {

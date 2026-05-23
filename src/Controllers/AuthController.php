@@ -38,7 +38,7 @@ class AuthController extends Controller {
         $this->render('register', [
             'error' => $error,
             'success' => $success
-        ]);
+        ], 'auth');
     }
 
     /**
@@ -149,7 +149,7 @@ class AuthController extends Controller {
         $this->render('login', [
             'error' => $error,
             'success' => $success
-        ]);
+        ], 'auth');
     }
 
     /**

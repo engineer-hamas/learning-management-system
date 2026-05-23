@@ -13,17 +13,32 @@ class Response {
      * @param string $view Name of the view file (without extension)
      * @param array $data Associative array of parameters to extract
      */
-    public function render(string $view, array $data = []): void {
-        // Extract variables to the local scope of this function
+    public function render(string $view, array $data = [], string $layout = 'app'): void {
         extract($data);
 
-        // Calculate absolute path to view template
         $viewFile = dirname(__DIR__) . "/Views/{$view}.php";
 
-        if (file_exists($viewFile)) {
-            require_once $viewFile;
+        if ($layout) {
+            $layoutFile = dirname(__DIR__) . "/Views/layouts/{$layout}.php";
+            if (file_exists($viewFile)) {
+                ob_start();
+                require $viewFile;
+                $content = ob_get_clean();
+                
+                if (file_exists($layoutFile)) {
+                    require $layoutFile;
+                } else {
+                    echo $content;
+                }
+            } else {
+                trigger_error("View file not found: {$viewFile}", E_USER_ERROR);
+            }
         } else {
-            trigger_error("View file not found: {$viewFile}", E_USER_ERROR);
+            if (file_exists($viewFile)) {
+                require_once $viewFile;
+            } else {
+                trigger_error("View file not found: {$viewFile}", E_USER_ERROR);
+            }
         }
         exit;
     }

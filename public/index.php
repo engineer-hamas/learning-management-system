@@ -59,6 +59,9 @@ $router->post('/enrollments/remove', [EnrollmentController::class, 'removeStuden
 
 // Course Content Routes
 $router->get('/course', [CourseController::class, 'show']);
+$router->get('/course/attendance', [CourseController::class, 'showAttendance']);
+$router->get('/course/attendance/take', [CourseController::class, 'takeAttendance']);
+$router->post('/course/attendance/mark', [CourseController::class, 'markAttendance']);
 $router->post('/course/material', [CourseController::class, 'addMaterial']);
 $router->post('/course/assignment', [CourseController::class, 'addAssignment']);
 $router->post('/course/exam', [CourseController::class, 'addExam']);
