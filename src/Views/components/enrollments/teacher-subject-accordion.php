@@ -26,7 +26,7 @@
 
                                     <!-- Enrolled Students List -->
                                     <?php if (empty($subject['enrolled'])): ?>
-                                        <div class="empty-enrolled-box">
+                                        <div class="empty-state">
                                             <div class="empty-icon-lg">👥</div>
                                             No students are currently enrolled in this subject.
                                         </div>

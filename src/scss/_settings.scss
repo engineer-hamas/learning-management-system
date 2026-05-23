@@ -1,3 +1,4 @@
+@use "mixins" as *;
 @use 'variables' as *;
 
 // ==========================================
@@ -46,7 +47,7 @@
             color: $text-muted;
             margin-bottom: 12px;
         }
-        
+
         .role-badge {
             font-size: 0.65rem;
             font-weight: 700;
@@ -87,9 +88,7 @@
         position: relative;
         border: 3px solid $border-color;
         background-color: #f8fafc;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        @include flex-center;
         transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 
         img {
@@ -101,9 +100,7 @@
         .profile-preview-fallback {
             width: 100%;
             height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            @include flex-center;
             font-size: 3rem;
             font-weight: 700;
             color: #ffffff;
@@ -165,9 +162,7 @@
 
     .tab-menu-item {
         width: 100%;
-        display: flex;
-        align-items: center;
-        gap: 12px;
+        @include flex-gap(12px);
         padding: 12px 16px;
         background: none;
         border: none;
@@ -408,9 +403,7 @@
     gap: 0;
 
     .toggle-card {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+        @include flex-between;
         padding: 20px 0;
         border-bottom: 1px solid $border-color;
         gap: 24px;
@@ -521,7 +514,7 @@
             box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.2);
             transform: translateY(-1px);
         }
-        
+
         &:active {
             transform: translateY(0);
         }
@@ -534,9 +527,7 @@
     height: 34px;
     border-radius: 50%;
     overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    @include flex-center;
     border: 2px solid $border-color;
     flex-shrink: 0;
 
@@ -549,9 +540,7 @@
     .header-avatar-fallback {
         width: 100%;
         height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        @include flex-center;
         font-weight: 700;
         font-size: 0.85rem;
         color: #ffffff;
@@ -568,9 +557,7 @@
 
 // 12. Settings Flash System Alerts
 .settings-alert {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+    @include flex-gap(12px);
     padding: 14px 20px;
     border-radius: 8px;
     font-size: 0.9rem;
@@ -582,7 +569,7 @@
         font-size: 1.15rem;
         flex-shrink: 0;
     }
-    
+
     .alert-content {
         line-height: 1.4;
     }
@@ -697,9 +684,7 @@
 }
 
 .search-result-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    @include flex-between;
     padding: 10px 16px;
     cursor: pointer;
     transition: all 0.15s ease;

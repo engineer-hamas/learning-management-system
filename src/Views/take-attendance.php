@@ -25,7 +25,7 @@
     </div>
 
     <?php if (empty($enrolled_students)): ?>
-      <div class="empty-content" class="empty-state-dashed">No students are currently enrolled in this course.</div>
+      <div class="empty-state" class="empty-state">No students are currently enrolled in this course.</div>
     <?php else: ?>
       <div class="list-header-flex">
         <h3 class="list-header-title">Enrolled Students</h3>

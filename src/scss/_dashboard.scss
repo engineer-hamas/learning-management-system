@@ -1,3 +1,4 @@
+@use "mixins" as *;
 @use 'variables' as *;
 
 .dashboard-body {
@@ -34,14 +35,12 @@
         .logo-container {
             display: flex;
             align-items: center;
-            
+
             h3 {
                 font-size: 1.15rem;
                 font-weight: 700;
                 color: $text-main;
-                display: flex;
-                align-items: center;
-                gap: 8px;
+                @include flex-gap(8px);
                 transition: gap 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             }
         }
@@ -60,9 +59,7 @@
         backdrop-filter: blur(8px);
         border: 1px solid $border-color;
         box-shadow: 0 4px 10px rgba(15, 23, 42, 0.06), 0 2px 4px rgba(15, 23, 42, 0.04);
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        @include flex-center;
         cursor: pointer;
         color: $text-muted;
         z-index: 200; // Floats above content
@@ -72,9 +69,7 @@
 
         .toggle-icon {
             font-size: 0.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            @include flex-center;
             transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
@@ -106,9 +101,7 @@
     }
 
     .menu-item {
-        display: flex;
-        align-items: center;
-        gap: 12px;
+        @include flex-gap(12px);
         padding: 10px 12px;
         color: $text-muted;
         text-decoration: none;
@@ -296,9 +289,7 @@ body.sidebar-pre-collapsed {
     background-color: $surface-color;
     border-bottom: 1px solid $border-color;
     padding: 16px 40px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    @include flex-between;
     position: sticky;
     top: 0;
     z-index: 10;
@@ -312,9 +303,7 @@ body.sidebar-pre-collapsed {
     }
 
     .header-profile {
-        display: flex;
-        align-items: center;
-        gap: 12px;
+        @include flex-gap(12px);
 
         .profile-name {
             font-weight: 500;

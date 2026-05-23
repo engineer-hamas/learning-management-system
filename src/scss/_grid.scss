@@ -1,0 +1,31 @@
+// ==========================================
+// 📐 Algorithmic 12-Column Grid System
+// ==========================================
+// Usage: <div class="grid"><div class="col-6">Half</div><div class="col-6">Half</div></div>
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 20px;
+  width: 100%;
+}
+
+@for $i from 1 through 12 {
+  .col-#{$i} {
+    grid-column: span #{$i};
+  }
+}
+
+// Responsive overrides
+@media (max-width: 768px) {
+  @for $i from 1 through 12 {
+    .col-md-#{$i} {
+      grid-column: span #{$i};
+    }
+  }
+  
+  // Default stack on mobile for general columns
+  [class^="col-"]:not([class^="col-md-"]) {
+    grid-column: span 12;
+  }
+}

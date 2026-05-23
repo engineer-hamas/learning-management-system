@@ -16,29 +16,36 @@
   require __DIR__ . '/components/common/course-banner.php';
   ?>
 
+  <?php if ($userRole === 'teacher'): ?>
+    <!-- Manage Enrollments (Full Row at Top) -->
+    <div style="margin-bottom: 30px;">
+      <?php require __DIR__ . '/components/course/enrollments-accordion.php'; ?>
+    </div>
+  <?php endif; ?>
+
   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
     <!-- Course Materials -->
-    <div class="accordion-item">
-      <div class="accordion-header" onclick="toggleAccordion('mat-content', 'mat-icon')">
+    <div class="accordion__item">
+      <div class="accordion__header" onclick="toggleAccordion('mat-content', 'mat-icon')">
         <h3>📚 Course Materials</h3>
         <div style="display: flex; align-items: center; gap: 15px;">
           <?php if ($userRole === 'teacher'): ?>
             <button class="add-btn" onclick="event.stopPropagation(); openModal('materialModal')">+ Add</button>
           <?php endif; ?>
-          <span class="chevron active" id="mat-icon">▼</span>
+          <span class="accordion__icon" id="mat-icon">▼</span>
         </div>
       </div>
-      <div class="accordion-content active" id="mat-content">
+      <div class="accordion__content" id="mat-content">
         <?php if (empty($materials)): ?>
-          <div class="empty-content">No course materials uploaded yet.</div>
+          <div class="empty-state">No course materials uploaded yet.</div>
         <?php else: ?>
           <?php foreach ($materials as $mat): ?>
-            <details class="item-details">
-              <summary class="item-summary">
+            <details class="accordion-detail">
+              <summary class="accordion-detail__summary">
                 <span style="color: #1e293b; font-weight: 600;"><?= e($mat['title']) ?></span>
                 <span style="font-size: 0.85rem; color: #64748b;"><?= date('M j, Y', strtotime($mat['created_at'])) ?></span>
               </summary>
-              <div class="item-body">
+              <div class="accordion-detail__body">
                 <?php if (!empty($mat['file_path'])): ?>
                   <a href="<?= e($mat['file_path']) ?>" download="<?= e($mat['original_filename']) ?>" class="file-download-btn">⬇️ Download <?= e($mat['original_filename']) ?></a>
                 <?php endif; ?>
@@ -58,27 +65,27 @@
     </div>
 
     <!-- Assignments -->
-    <div class="accordion-item">
-      <div class="accordion-header" onclick="toggleAccordion('ass-content', 'ass-icon')">
+    <div class="accordion__item">
+      <div class="accordion__header" onclick="toggleAccordion('ass-content', 'ass-icon')">
         <h3>📝 Assignments</h3>
         <div style="display: flex; align-items: center; gap: 15px;">
           <?php if ($userRole === 'teacher'): ?>
             <button class="add-btn" onclick="event.stopPropagation(); openModal('assignmentModal')">+ Add</button>
           <?php endif; ?>
-          <span class="chevron active" id="ass-icon">▼</span>
+          <span class="accordion__icon" id="ass-icon">▼</span>
         </div>
       </div>
-      <div class="accordion-content active" id="ass-content">
+      <div class="accordion__content" id="ass-content">
         <?php if (empty($assignments)): ?>
-          <div class="empty-content">No assignments currently due.</div>
+          <div class="empty-state">No assignments currently due.</div>
         <?php else: ?>
           <?php foreach ($assignments as $ass): ?>
-            <details class="item-details">
-              <summary class="item-summary">
+            <details class="accordion-detail">
+              <summary class="accordion-detail__summary">
                 <span style="color: #1e293b; font-weight: 600;"><?= e($ass['title']) ?></span>
                 <span style="font-size: 0.85rem; color: #dc2626; font-weight: 500;">Due: <?= $ass['due_date'] ? date('M j, Y g:i A', strtotime($ass['due_date'])) : 'No due date' ?></span>
               </summary>
-              <div class="item-body">
+              <div class="accordion-detail__body">
                 <p style="margin-top: 0;"><?= e($ass['description']) ?></p>
 
                 <?php if (!empty($ass['file_path'])): ?>
@@ -100,27 +107,27 @@
     </div>
 
     <!-- Exams -->
-    <div class="accordion-item">
-      <div class="accordion-header" onclick="toggleAccordion('exam-content', 'exam-icon')">
+    <div class="accordion__item">
+      <div class="accordion__header" onclick="toggleAccordion('exam-content', 'exam-icon')">
         <h3>✍️ Exams</h3>
         <div style="display: flex; align-items: center; gap: 15px;">
           <?php if ($userRole === 'teacher'): ?>
             <button class="add-btn" onclick="event.stopPropagation(); openModal('examModal')">+ Add</button>
           <?php endif; ?>
-          <span class="chevron active" id="exam-icon">▼</span>
+          <span class="accordion__icon" id="exam-icon">▼</span>
         </div>
       </div>
-      <div class="accordion-content active" id="exam-content">
+      <div class="accordion__content" id="exam-content">
         <?php if (empty($exams)): ?>
-          <div class="empty-content">No upcoming exams scheduled.</div>
+          <div class="empty-state">No upcoming exams scheduled.</div>
         <?php else: ?>
           <?php foreach ($exams as $exam): ?>
-            <details class="item-details">
-              <summary class="item-summary">
+            <details class="accordion-detail">
+              <summary class="accordion-detail__summary">
                 <span style="color: #1e293b; font-weight: 600;"><?= e($exam['title']) ?></span>
                 <span style="font-size: 0.85rem; color: #059669; font-weight: 500;"><?= date('M j, Y g:i A', strtotime($exam['exam_date'])) ?></span>
               </summary>
-              <div class="item-body">
+              <div class="accordion-detail__body">
                 <p style="margin-top: 0;"><strong>Duration:</strong> <?= (int)$exam['duration_minutes'] ?> minutes</p>
 
                 <?php if (!empty($exam['file_path'])): ?>
@@ -142,27 +149,27 @@
     </div>
 
     <!-- Quizzes -->
-    <div class="accordion-item">
-      <div class="accordion-header" onclick="toggleAccordion('quiz-content', 'quiz-icon')">
+    <div class="accordion__item">
+      <div class="accordion__header" onclick="toggleAccordion('quiz-content', 'quiz-icon')">
         <h3>❓ Quizzes</h3>
         <div style="display: flex; align-items: center; gap: 15px;">
           <?php if ($userRole === 'teacher'): ?>
             <button class="add-btn" onclick="event.stopPropagation(); openModal('quizModal')">+ Add</button>
           <?php endif; ?>
-          <span class="chevron active" id="quiz-icon">▼</span>
+          <span class="accordion__icon" id="quiz-icon">▼</span>
         </div>
       </div>
-      <div class="accordion-content active" id="quiz-content">
+      <div class="accordion__content" id="quiz-content">
         <?php if (empty($quizzes)): ?>
-          <div class="empty-content">No active quizzes.</div>
+          <div class="empty-state">No active quizzes.</div>
         <?php else: ?>
           <?php foreach ($quizzes as $quiz): ?>
-            <details class="item-details">
-              <summary class="item-summary">
+            <details class="accordion-detail">
+              <summary class="accordion-detail__summary">
                 <span style="color: #1e293b; font-weight: 600;"><?= e($quiz['title']) ?></span>
                 <span style="font-size: 0.85rem; color: #64748b;"><?= date('M j, Y', strtotime($quiz['created_at'])) ?></span>
               </summary>
-              <div class="item-body">
+              <div class="accordion-detail__body">
                 <p style="margin-top: 0;"><?= nl2br(e($quiz['description'])) ?></p>
 
                 <?php if (!empty($quiz['file_path'])): ?>
@@ -190,11 +197,11 @@
 <!-- Modals for Teachers -->
 <?php if ($userRole === 'teacher'): ?>
   <!-- Material Modal -->
-  <div class="modal-overlay" id="materialModal">
-    <div class="modal-content">
-      <div class="modal-header">
+  <div class="modal" id="materialModal">
+    <div class="modal__content">
+      <div class="modal__header">
         <h3>Upload Material</h3>
-        <button class="modal-close" onclick="closeModal('materialModal')">&times;</button>
+        <button class="modal__close" onclick="closeModal('materialModal')">&times;</button>
       </div>
       <form action="/course/material" method="POST" enctype="multipart/form-data">
         <input type="hidden" name="subject_id" value="<?= e($course['id']) ?>">
@@ -216,11 +223,11 @@
   </div>
 
   <!-- Assignment Modal -->
-  <div class="modal-overlay" id="assignmentModal">
-    <div class="modal-content">
-      <div class="modal-header">
+  <div class="modal" id="assignmentModal">
+    <div class="modal__content">
+      <div class="modal__header">
         <h3>Create Assignment</h3>
-        <button class="modal-close" onclick="closeModal('assignmentModal')">&times;</button>
+        <button class="modal__close" onclick="closeModal('assignmentModal')">&times;</button>
       </div>
       <form action="/course/assignment" method="POST" enctype="multipart/form-data">
         <input type="hidden" name="subject_id" value="<?= e($course['id']) ?>">
@@ -250,11 +257,11 @@
   </div>
 
   <!-- Exam Modal -->
-  <div class="modal-overlay" id="examModal">
-    <div class="modal-content">
-      <div class="modal-header">
+  <div class="modal" id="examModal">
+    <div class="modal__content">
+      <div class="modal__header">
         <h3>Schedule Exam</h3>
-        <button class="modal-close" onclick="closeModal('examModal')">&times;</button>
+        <button class="modal__close" onclick="closeModal('examModal')">&times;</button>
       </div>
       <form action="/course/exam" method="POST" enctype="multipart/form-data">
         <input type="hidden" name="subject_id" value="<?= e($course['id']) ?>">
@@ -284,11 +291,11 @@
   </div>
 
   <!-- Quiz Modal -->
-  <div class="modal-overlay" id="quizModal">
-    <div class="modal-content">
-      <div class="modal-header">
+  <div class="modal" id="quizModal">
+    <div class="modal__content">
+      <div class="modal__header">
         <h3>Add Quiz</h3>
-        <button class="modal-close" onclick="closeModal('quizModal')">&times;</button>
+        <button class="modal__close" onclick="closeModal('quizModal')">&times;</button>
       </div>
       <form action="/course/quiz" method="POST" enctype="multipart/form-data">
         <input type="hidden" name="subject_id" value="<?= e($course['id']) ?>">
@@ -329,20 +336,3 @@
     });
   </script>
 <?php endif; ?>
-<script>
-  }
-  });
-
-  function toggleAccordion(contentId, iconId) {
-    const content = document.getElementById(contentId);
-    const icon = document.getElementById(iconId);
-
-    if (content.classList.contains('active')) {
-      content.classList.remove('active');
-      icon.classList.remove('active');
-    } else {
-      content.classList.add('active');
-      icon.classList.add('active');
-    }
-  }
-</script>

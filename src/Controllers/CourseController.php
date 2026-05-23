@@ -62,8 +62,37 @@ class CourseController extends Controller {
             'materials' => [],
             'assignments' => [],
             'exams' => [],
-            'quizzes' => []
+            'quizzes' => [],
+            'enrolledStudents' => [],
+            'allStudents' => []
         ];
+
+        // Fetch enrolled students for this course
+        $enrolledStmt = $this->db->prepare("
+            SELECT u.id, u.name, u.email, e.enrolled_at
+            FROM users u
+            JOIN enrollments e ON u.id = e.student_id
+            WHERE e.subject_id = ?
+        ");
+        $enrolledStmt->bind_param("i", $courseId);
+        $enrolledStmt->execute();
+        $enrolledRes = $enrolledStmt->get_result();
+        if ($enrolledRes) {
+            while ($student = $enrolledRes->fetch_assoc()) {
+                $data['enrolledStudents'][] = $student;
+            }
+        }
+        $enrolledStmt->close();
+
+        // Fetch all students if teacher
+        if ($role === 'teacher') {
+            $stuRes = $this->db->query("SELECT id, name, email FROM users WHERE role = 'student'");
+            if ($stuRes) {
+                while ($stu = $stuRes->fetch_assoc()) {
+                    $data['allStudents'][] = $stu;
+                }
+            }
+        }
 
         // Fetch user avatar
         $avatarStmt = $this->db->prepare("SELECT avatar_path FROM users WHERE id = ?");
