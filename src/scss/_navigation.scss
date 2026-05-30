@@ -1,0 +1,51 @@
+@use "variables" as *;
+
+// ==========================================
+// 🧭 UI Kit: Navigation & Tabs
+// ==========================================
+
+.nav-tabs {
+  display: flex;
+  gap: 15px;
+  border-bottom: 2px solid var(--color-border);
+  margin-bottom: 25px;
+  padding-bottom: 10px;
+  overflow-x: auto;
+  
+  // Hide scrollbar for tabs
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  scrollbar-width: none;
+  
+  &__item {
+    padding: 8px 16px;
+    color: var(--color-text-muted);
+    font-weight: 500;
+    text-decoration: none;
+    border-radius: 6px;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    font-family: inherit;
+    font-size: 0.95rem;
+
+    &:hover {
+      color: var(--color-text-main);
+      background: var(--color-border); // Soft hover background
+    }
+
+    &--active {
+      color: #fff;
+      background: var(--color-primary);
+      box-shadow: 0 4px 10px rgba(var(--color-primary-rgb, 37,99,235), 0.25);
+
+      &:hover {
+        background: var(--color-primary-hover);
+        color: #fff;
+      }
+    }
+  }
+}

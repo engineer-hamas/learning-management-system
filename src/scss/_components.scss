@@ -1,7 +1,7 @@
 @use "mixins" as *;
 
 /* Modern Accordion */
-\.accordion__item {
+.accordion__item {
   &:hover {
   border-color: #cbd5e1;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
@@ -16,7 +16,7 @@
   height: fit-content;
 }
 
-\\.accordion__header {
+.accordion__header {
   h3 {
   margin: 0;
   color: #1e293b;
@@ -70,7 +70,7 @@
 
 
 /* Nested Item Collapsibles */
-\.accordion-detail {
+.accordion-detail {
   &:hover {
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
@@ -82,7 +82,7 @@
   transition: box-shadow 0.2s;
 }
 
-\.accordion-detail__summary {
+.accordion-detail__summary {
   &:hover {
   background: #f1f5f9;
 }
@@ -107,7 +107,7 @@
   line-height: 1.5;
 }
 
-\.file-download-btn {
+.file-download-btn {
   &:hover {
   background: #cbd5e1;
 }
@@ -158,7 +158,7 @@
   transition: transform 0.3s ease;
 }
 
-.modal-overlay.active .modal__content {
+.modal--active .modal__content {
   transform: translateY(0);
 }
 
@@ -167,12 +167,12 @@
   margin-bottom: 20px;
 }
 
-.modal-header h3 {
+.modal__header h3 {
   margin: 0;
   color: #1e293b;
 }
 
-\.modal__close {
+.modal__close {
   &:hover {
   color: #0f172a;
 }
@@ -847,7 +847,7 @@
 }
 
 /* Modern Accordion for Teachers */
-\.accordion__item {
+.accordion__item {
   &:hover {
   border-color: #cbd5e1;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
@@ -861,7 +861,7 @@
   transition: all 0.3s ease;
 }
 
-\\.accordion__header {
+.accordion__header {
   h3 {
   margin: 0;
   color: #1e293b;
@@ -913,7 +913,7 @@
   }
 }
 /* Premium Glassmorphic Cards for Students */
-\\\\.student-card {
+\\.student-card {
   &::before {
   content: "";
   position: absolute;
@@ -1025,7 +1025,7 @@
   font-weight: 500;
 }
 
-\.btn-manage-course {
+.btn-manage-course {
   &:hover {
   background: #059669;
   transform: translateY(-1px);
@@ -1065,7 +1065,7 @@
   position: relative;
 }
 
-\.searchable-input {
+.searchable-input {
   &:focus {
   border-color: #3b82f6;
 }
@@ -1094,7 +1094,7 @@
   z-index: 50;
 }
 
-\.dropdown-item-styled {
+.dropdown-item-styled {
   &:hover {
   background: #f8fafc;
 }
@@ -1122,7 +1122,7 @@
   font-size: 0.85rem;
 }
 
-\.btn-enroll-submit {
+.btn-enroll-submit {
   &:hover {
   background: #2563eb;
 }
@@ -1177,7 +1177,7 @@
   letter-spacing: 0.5px;
 }
 
-\.table-body-row {
+.table-body-row {
   &:hover {
   background: #f8fafc;
 }
@@ -1222,7 +1222,7 @@
   display: inline;
 }
 
-\.btn-remove-enrollment {
+.btn-remove-enrollment {
   &:hover {
   background: #fee2e2;
 }

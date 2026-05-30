@@ -1,20 +1,33 @@
 <?php ob_start(); ?>
-<h2><a href="/course?id=<?= e($course['id']) ?>" class="back-link">&larr; Back to <?= e($course['name']) ?></a></h2>
+<div><a href="/course?id=<?= e($course['id']) ?>" class="back-link">&larr; Back to <?= e($course['name']) ?></a></div>
 <?php $headerTitle = ob_get_clean(); ?>
 <?php require __DIR__ . '/components/common/page-header.php'; ?>
 
 <div class="dashboard-container">
   <?php
   $bannerExtraClass = 'attendance-header-banner';
-  $bannerTitleClass = 'attendance-title-lg';
-  $bannerTitleStyle = '';
+  $bannerTitleClass = 'attendance-title-lg text-title';
   $bannerTitle = '📊 Attendance Register';
-  $bannerSubtitleClass = 'attendance-subtitle';
-  $bannerSubtitleStyle = '';
+  $bannerSubtitleClass = 'attendance-subtitle text-subtitle text-muted';
   $bannerSubtitle = '<strong>' . e($course['name']) . '</strong> (' . e($course['code']) . ')';
   $hideDescription = true;
   require __DIR__ . '/components/common/course-banner.php';
   ?>
+
+  <!-- Universal Course Navigation Tabs -->
+  <div class="nav-tabs" style="margin-top: 20px;">
+    <a href="/course?id=<?= e($course['id']) ?>" class="nav-tabs__item">📚 Course Content</a>
+    <a href="/course/attendance?id=<?= e($course['id']) ?>" class="nav-tabs__item nav-tabs__item--active">📊 Attendance</a>
+    <?php if ($userRole === 'teacher'): ?>
+      <a href="/course/manage-enrollments?id=<?= e($course['id']) ?>" class="nav-tabs__item">👥 Manage Enrollments</a>
+    <?php endif; ?>
+  </div>
+
+  <?php if ($userRole === 'teacher'): ?>
+    <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
+        <a href="/course/attendance/take?id=<?= e($course['id']) ?>" class="btn btn--primary">📝 Take Attendance</a>
+    </div>
+  <?php endif; ?>
 
   <?php if ($userRole === 'teacher'): ?>
     <?php if (empty($attendance_dates)): ?>

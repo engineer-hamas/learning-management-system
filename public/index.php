@@ -48,6 +48,7 @@ $router->get('/register', [AuthController::class, 'showRegister']);
 $router->post('/register', [AuthController::class, 'handleRegister']);
 
 $router->get('/logout', [AuthController::class, 'handleLogout']);
+$router->post('/logout', [AuthController::class, 'handleLogout']);
 
 // Dashboard Route
 $router->get('/dashboard', [DashboardController::class, 'index']);
@@ -61,6 +62,7 @@ $router->post('/enrollments/remove', [EnrollmentController::class, 'removeStuden
 $router->get('/course', [CourseController::class, 'show']);
 $router->get('/course/attendance', [CourseController::class, 'showAttendance']);
 $router->get('/course/attendance/take', [CourseController::class, 'takeAttendance']);
+$router->get('/course/manage-enrollments', [CourseController::class, 'manageEnrollments']);
 $router->post('/course/attendance/mark', [CourseController::class, 'markAttendance']);
 $router->post('/course/material', [CourseController::class, 'addMaterial']);
 $router->post('/course/assignment', [CourseController::class, 'addAssignment']);

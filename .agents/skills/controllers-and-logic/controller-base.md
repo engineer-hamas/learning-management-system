@@ -47,13 +47,13 @@ use App\Core\Request;
 use App\Core\Response;
 
 class MyCustomController extends Controller {
-    
+
     /**
      * Handle homepage display
      */
     public function show(Request $request, Response $response): void {
         // Business logic here...
-        
+
         $this->render('my-view', [
             'title' => 'My Premium LMS Title',
             'records' => []

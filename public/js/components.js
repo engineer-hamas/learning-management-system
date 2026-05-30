@@ -38,10 +38,10 @@ function toggleAccordion(contentId, iconId) {
 
 // Modal functionality
 function openModal(id) {
-    document.getElementById(id).classList.add('accordion__content--active');
+    document.getElementById(id).classList.add('modal--active');
 }
 function closeModal(id) {
-    document.getElementById(id).classList.remove('accordion__content--active');
+    document.getElementById(id).classList.remove('modal--active');
 }
 
 // Searchable Dropdown Logic

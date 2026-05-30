@@ -1,5 +1,5 @@
 <?php ob_start(); ?>
-<h2><a href="/enrollments" style="color: #64748b; text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='#0f172a'" onmouseout="this.style.color='#64748b'">&larr; Back to <?= e($userRole) === 'teacher' ? 'Enrollments' : 'Courses' ?></a></h2>
+<div><a href="/enrollments" class="back-link">&larr; Back to <?= e($userRole) === 'teacher' ? 'Enrollments' : 'Courses' ?></a></div>
 <?php $headerTitle = ob_get_clean(); ?>
 <?php require __DIR__ . '/components/common/page-header.php'; ?>
 
@@ -16,23 +16,27 @@
   require __DIR__ . '/components/common/course-banner.php';
   ?>
 
-  <?php if ($userRole === 'teacher'): ?>
-    <!-- Manage Enrollments (Full Row at Top) -->
-    <div style="margin-bottom: 30px;">
-      <?php require __DIR__ . '/components/course/enrollments-accordion.php'; ?>
-    </div>
-  <?php endif; ?>
+  <!-- Universal Course Navigation Tabs -->
+  <div class="nav-tabs" style="margin-top: 20px;">
+    <a href="/course?id=<?= e($course['id']) ?>" class="nav-tabs__item nav-tabs__item--active">📚 Course Content</a>
+    <a href="/course/attendance?id=<?= e($course['id']) ?>" class="nav-tabs__item">📊 Attendance</a>
+    <?php if ($userRole === 'teacher'): ?>
+      <a href="/course/manage-enrollments?id=<?= e($course['id']) ?>" class="nav-tabs__item">👥 Manage Enrollments</a>
+    <?php endif; ?>
+  </div>
+
+
 
   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
     <!-- Course Materials -->
-    <div class="accordion__item">
-      <div class="accordion__header" onclick="toggleAccordion('mat-content', 'mat-icon')">
+    <div class="card card--glass">
+      <div class="section-header" onclick="toggleAccordion('mat-content', 'mat-icon')">
         <h3>📚 Course Materials</h3>
         <div style="display: flex; align-items: center; gap: 15px;">
           <?php if ($userRole === 'teacher'): ?>
-            <button class="add-btn" onclick="event.stopPropagation(); openModal('materialModal')">+ Add</button>
+            <button type="button" class="btn btn--primary" onclick="event.stopPropagation(); openModal('materialModal')">+ Add</button>
           <?php endif; ?>
-          <span class="accordion__icon" id="mat-icon">▼</span>
+          <span class="btn btn--icon" id="mat-icon">▼</span>
         </div>
       </div>
       <div class="accordion__content" id="mat-content">
@@ -47,7 +51,7 @@
               </summary>
               <div class="accordion-detail__body">
                 <?php if (!empty($mat['file_path'])): ?>
-                  <a href="<?= e($mat['file_path']) ?>" download="<?= e($mat['original_filename']) ?>" class="file-download-btn">⬇️ Download <?= e($mat['original_filename']) ?></a>
+                  <a href="<?= e($mat['file_path']) ?>" download="<?= e($mat['original_filename']) ?>" class="btn btn--ghost">⬇️ Download <?= e($mat['original_filename']) ?></a>
                 <?php endif; ?>
 
                 <?php if ($userRole === 'teacher'): ?>
@@ -65,14 +69,14 @@
     </div>
 
     <!-- Assignments -->
-    <div class="accordion__item">
-      <div class="accordion__header" onclick="toggleAccordion('ass-content', 'ass-icon')">
+    <div class="card card--glass">
+      <div class="section-header" onclick="toggleAccordion('ass-content', 'ass-icon')">
         <h3>📝 Assignments</h3>
         <div style="display: flex; align-items: center; gap: 15px;">
           <?php if ($userRole === 'teacher'): ?>
-            <button class="add-btn" onclick="event.stopPropagation(); openModal('assignmentModal')">+ Add</button>
+            <button type="button" class="btn btn--primary" onclick="event.stopPropagation(); openModal('assignmentModal')">+ Add</button>
           <?php endif; ?>
-          <span class="accordion__icon" id="ass-icon">▼</span>
+          <span class="btn btn--icon" id="ass-icon">▼</span>
         </div>
       </div>
       <div class="accordion__content" id="ass-content">
@@ -89,7 +93,7 @@
                 <p style="margin-top: 0;"><?= e($ass['description']) ?></p>
 
                 <?php if (!empty($ass['file_path'])): ?>
-                  <a href="<?= e($ass['file_path']) ?>" download="<?= e($ass['original_filename']) ?>" class="file-download-btn">⬇️ Download <?= e($ass['original_filename']) ?></a>
+                  <a href="<?= e($ass['file_path']) ?>" download="<?= e($ass['original_filename']) ?>" class="btn btn--ghost">⬇️ Download <?= e($ass['original_filename']) ?></a>
                 <?php endif; ?>
 
                 <?php if ($userRole === 'teacher'): ?>
@@ -107,14 +111,14 @@
     </div>
 
     <!-- Exams -->
-    <div class="accordion__item">
-      <div class="accordion__header" onclick="toggleAccordion('exam-content', 'exam-icon')">
+    <div class="card card--glass">
+      <div class="section-header" onclick="toggleAccordion('exam-content', 'exam-icon')">
         <h3>✍️ Exams</h3>
         <div style="display: flex; align-items: center; gap: 15px;">
           <?php if ($userRole === 'teacher'): ?>
-            <button class="add-btn" onclick="event.stopPropagation(); openModal('examModal')">+ Add</button>
+            <button type="button" class="btn btn--primary" onclick="event.stopPropagation(); openModal('examModal')">+ Add</button>
           <?php endif; ?>
-          <span class="accordion__icon" id="exam-icon">▼</span>
+          <span class="btn btn--icon" id="exam-icon">▼</span>
         </div>
       </div>
       <div class="accordion__content" id="exam-content">
@@ -131,7 +135,7 @@
                 <p style="margin-top: 0;"><strong>Duration:</strong> <?= (int)$exam['duration_minutes'] ?> minutes</p>
 
                 <?php if (!empty($exam['file_path'])): ?>
-                  <a href="<?= e($exam['file_path']) ?>" download="<?= e($exam['original_filename']) ?>" class="file-download-btn">⬇️ Download <?= e($exam['original_filename']) ?></a>
+                  <a href="<?= e($exam['file_path']) ?>" download="<?= e($exam['original_filename']) ?>" class="btn btn--ghost">⬇️ Download <?= e($exam['original_filename']) ?></a>
                 <?php endif; ?>
 
                 <?php if ($userRole === 'teacher'): ?>
@@ -149,14 +153,14 @@
     </div>
 
     <!-- Quizzes -->
-    <div class="accordion__item">
-      <div class="accordion__header" onclick="toggleAccordion('quiz-content', 'quiz-icon')">
+    <div class="card card--glass">
+      <div class="section-header" onclick="toggleAccordion('quiz-content', 'quiz-icon')">
         <h3>❓ Quizzes</h3>
         <div style="display: flex; align-items: center; gap: 15px;">
           <?php if ($userRole === 'teacher'): ?>
-            <button class="add-btn" onclick="event.stopPropagation(); openModal('quizModal')">+ Add</button>
+            <button type="button" class="btn btn--primary" onclick="event.stopPropagation(); openModal('quizModal')">+ Add</button>
           <?php endif; ?>
-          <span class="accordion__icon" id="quiz-icon">▼</span>
+          <span class="btn btn--icon" id="quiz-icon">▼</span>
         </div>
       </div>
       <div class="accordion__content" id="quiz-content">
@@ -173,7 +177,7 @@
                 <p style="margin-top: 0;"><?= nl2br(e($quiz['description'])) ?></p>
 
                 <?php if (!empty($quiz['file_path'])): ?>
-                  <a href="<?= e($quiz['file_path']) ?>" download="<?= e($quiz['original_filename']) ?>" class="file-download-btn">⬇️ Download <?= e($quiz['original_filename']) ?></a>
+                  <a href="<?= e($quiz['file_path']) ?>" download="<?= e($quiz['original_filename']) ?>" class="btn btn--ghost">⬇️ Download <?= e($quiz['original_filename']) ?></a>
                 <?php endif; ?>
 
                 <?php if ($userRole === 'teacher'): ?>

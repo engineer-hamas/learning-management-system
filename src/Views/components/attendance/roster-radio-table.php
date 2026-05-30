@@ -19,7 +19,7 @@
                                             <?php endif; ?>
                                             <div>
                                                 <strong class="student-name"><?= e($student['name']) ?></strong>
-                                                <?php if (!empty($student['roll_no'])): ?>
+                                                <?php if (!empty($student['roll_no'] ?? null)): ?>
                                                     <span class="student-roll">Roll No: <?= e($student['roll_no']) ?></span>
                                                 <?php endif; ?>
                                             </div>

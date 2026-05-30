@@ -1,7 +1,7 @@
 @use "mixins" as *;
 
         /* Modern Accordion for Teachers */
-        \.accordion__item {
+        .accordion__item {
   &:hover {
             border-color: #cbd5e1;
             box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
@@ -15,7 +15,7 @@
             transition: all 0.3s ease;
         }
 
-        \.accordion__header {
+        .accordion__header {
   &:hover {
             background: #f8fafc;
         }
@@ -51,7 +51,7 @@
         }
 
         /* Premium Glassmorphic Cards for Students */
-        \\\\.student-card {
+        \\.student-card {
   &::before {
             content: '';
             position: absolute;
@@ -111,24 +111,24 @@
 .subject-icon-box { background: #e0f2fe; color: #0369a1; width: 45px; height: 45px; border-radius: 10px; @include flex-center; font-size: 1.5rem; }
 .subject-title { margin: 0 0 4px 0; font-size: 1.25rem; color: #1e293b; line-height: 1.2; }
 .subject-meta { font-size: 0.85rem; color: #64748b; font-weight: 500; }
-\.btn-manage-course {
+.btn-manage-course {
   &:hover { background: #059669; transform: translateY(-1px); } padding: 8px 16px; background: #10b981; color: #fff; border-radius: 6px; text-decoration: none; font-size: 0.9rem; font-weight: 600; transition: all 0.2s; box-shadow: 0 2px 4px rgba(16,185,129,0.2); }
 
 .manage-enrollments-header { @include flex-between; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid #e2e8f0; }
 .manage-title { margin: 0; color: #334155; font-size: 1.1rem; }
 .enroll-form-flex { display: flex; gap: 10px; align-items: center; overflow: visible; }
 .relative-wrapper { position: relative; }
-\.searchable-input {
+.searchable-input {
   &:focus { border-color: #3b82f6; } padding: 9px 12px; border-radius: 6px; border: 1px solid #cbd5e1; font-family: inherit; font-size: 0.9rem; width: 280px; outline: none; transition: border-color 0.2s; }
 
 .dropdown-list-container { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; margin-top: 4px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); max-height: 250px; overflow-y: auto; z-index: 50; }
-\.dropdown-item-styled {
+.dropdown-item-styled {
   &:hover { background: #f8fafc; } padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #f1f5f9; transition: background 0.2s; }
 
 .dropdown-student-name { font-weight: 500; color: #1e293b; font-size: 0.9rem; }
 .dropdown-student-email { font-size: 0.8rem; color: #64748b; }
 .dropdown-no-results { padding: 12px; text-align: center; color: #94a3b8; font-size: 0.85rem; }
-\.btn-enroll-submit {
+.btn-enroll-submit {
   &:hover { background: #2563eb; } padding: 9px 18px; border-radius: 6px; border: none; background: #3b82f6; color: #fff; cursor: pointer; font-weight: 600; transition: background 0.2s; }
 
 .empty-enrolled-box { text-align: center; padding: 30px; background: #fff; border: 1px dashed #cbd5e1; border-radius: 8px; color: #94a3b8; }
@@ -138,7 +138,7 @@
 .table-head-row { border-bottom: 1px solid #e2e8f0; background: #f8fafc; }
 .table-th-left { text-align: left; padding: 14px 20px; font-weight: 600; color: #475569; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; }
 .table-th-right { text-align: right; padding: 14px 20px; font-weight: 600; color: #475569; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; }
-\.table-body-row {
+.table-body-row {
   &:hover { background: #f8fafc; } border-bottom: 1px solid #f1f5f9; background: #fff; transition: background 0.2s; }
 
 .table-td-main { padding: 14px 20px; font-weight: 500; color: #1e293b; }
@@ -147,7 +147,7 @@
 .table-td-muted { padding: 14px 20px; color: #64748b; font-size: 0.95rem; }
 .table-td-right { padding: 14px 20px; text-align: right; }
 .inline-form { display: inline; }
-\.btn-remove-enrollment {
+.btn-remove-enrollment {
   &:hover { background: #fee2e2; } padding: 8px 14px; border-radius: 6px; border: 1px solid #fecaca; background: #fef2f2; color: #dc2626; cursor: pointer; font-size: 0.85rem; font-weight: 500; transition: all 0.2s; }
 
 .student-courses-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }

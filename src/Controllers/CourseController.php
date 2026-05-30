@@ -151,6 +151,16 @@ class CourseController extends Controller {
         $stmt->close();
         return $hasAccess;
     }
+    private function verifyStudentEnrollment(int $courseId): bool {
+        if ($_SESSION['user_role'] !== 'student') return false;
+        $stmt = $this->db->prepare("SELECT 1 FROM enrollments WHERE student_id = ? AND subject_id = ?");
+        $stmt->bind_param("ii", $_SESSION['user_id'], $courseId);
+        $stmt->execute();
+        $hasAccess = $stmt->get_result()->num_rows > 0;
+        $stmt->close();
+        return $hasAccess;
+    }
+
 
     private function handleFileUpload(string $subDir, string $savedFilename): array {
         if (!isset($_FILES['content_file']) || $_FILES['content_file']['error'] !== UPLOAD_ERR_OK) {
@@ -195,7 +205,8 @@ class CourseController extends Controller {
             $stmt->execute();
             $stmt->close();
         }
-        $this->redirect('/course?id=' . $courseId);
+        $redirectUrl = $_SERVER['HTTP_REFERER'] ?? '/course?id=' . $courseId;
+        $this->redirect($redirectUrl);
     }
 
     public function addAssignment(Request $request, Response $response): void {
@@ -220,7 +231,8 @@ class CourseController extends Controller {
         $stmt->execute();
         $stmt->close();
         
-        $this->redirect('/course?id=' . $courseId);
+        $redirectUrl = $_SERVER['HTTP_REFERER'] ?? '/course?id=' . $courseId;
+        $this->redirect($redirectUrl);
     }
 
     public function addExam(Request $request, Response $response): void {
@@ -243,7 +255,8 @@ class CourseController extends Controller {
             $stmt->close();
         }
         
-        $this->redirect('/course?id=' . $courseId);
+        $redirectUrl = $_SERVER['HTTP_REFERER'] ?? '/course?id=' . $courseId;
+        $this->redirect($redirectUrl);
     }
 
     public function addQuiz(Request $request, Response $response): void {
@@ -261,7 +274,8 @@ class CourseController extends Controller {
         $stmt->execute();
         $stmt->close();
         
-        $this->redirect('/course?id=' . $courseId);
+        $redirectUrl = $_SERVER['HTTP_REFERER'] ?? '/course?id=' . $courseId;
+        $this->redirect($redirectUrl);
     }
 
     private function deletePhysicalFile(string $table, int $id, int $courseId): void {
@@ -291,7 +305,8 @@ class CourseController extends Controller {
         $stmt->bind_param("ii", $id, $courseId);
         $stmt->execute();
         $stmt->close();
-        $this->redirect('/course?id=' . $courseId);
+        $redirectUrl = $_SERVER['HTTP_REFERER'] ?? '/course?id=' . $courseId;
+        $this->redirect($redirectUrl);
     }
 
     public function deleteAssignment(Request $request, Response $response): void {
@@ -305,7 +320,8 @@ class CourseController extends Controller {
         $stmt->bind_param("ii", $id, $courseId);
         $stmt->execute();
         $stmt->close();
-        $this->redirect('/course?id=' . $courseId);
+        $redirectUrl = $_SERVER['HTTP_REFERER'] ?? '/course?id=' . $courseId;
+        $this->redirect($redirectUrl);
     }
 
     public function deleteExam(Request $request, Response $response): void {
@@ -319,7 +335,8 @@ class CourseController extends Controller {
         $stmt->bind_param("ii", $id, $courseId);
         $stmt->execute();
         $stmt->close();
-        $this->redirect('/course?id=' . $courseId);
+        $redirectUrl = $_SERVER['HTTP_REFERER'] ?? '/course?id=' . $courseId;
+        $this->redirect($redirectUrl);
     }
 
     public function deleteQuiz(Request $request, Response $response): void {
@@ -333,7 +350,8 @@ class CourseController extends Controller {
         $stmt->bind_param("ii", $id, $courseId);
         $stmt->execute();
         $stmt->close();
-        $this->redirect('/course?id=' . $courseId);
+        $redirectUrl = $_SERVER['HTTP_REFERER'] ?? '/course?id=' . $courseId;
+        $this->redirect($redirectUrl);
     }
 
     public function showAttendance(Request $request, Response $response): void {
@@ -352,8 +370,8 @@ class CourseController extends Controller {
         if (!$course) $this->redirect('/dashboard');
 
         $data = [
-            'userRole' => $_SESSION['role'],
-            'userName' => $_SESSION['name'],
+            'userRole' => $_SESSION['user_role'],
+            'userName' => $_SESSION['user_name'],
             'course' => $course,
         ];
 
@@ -365,35 +383,35 @@ class CourseController extends Controller {
         $data['userAvatar'] = ($avatarRes && $avatarRes->num_rows > 0) ? $avatarRes->fetch_assoc()['avatar_path'] : null;
         $avatarStmt->close();
 
-        if ($_SESSION['role'] === 'teacher') {
+        if ($_SESSION['user_role'] === 'teacher') {
             // Get all enrolled students
-            $stuStmt = $this->db->prepare("SELECT u.id, u.name, u.email, u.roll_no, u.avatar_path FROM users u JOIN enrollments e ON u.id = e.student_id WHERE e.subject_id = ? ORDER BY u.name ASC");
+            $stuStmt = $this->db->prepare("SELECT u.id, u.name, u.email, u.avatar_path FROM users u JOIN enrollments e ON u.id = e.student_id WHERE e.subject_id = ? ORDER BY u.name ASC");
             $stuStmt->bind_param("i", $courseId);
             $stuStmt->execute();
             $data['students'] = $stuStmt->get_result()->fetch_all(MYSQLI_ASSOC);
             $stuStmt->close();
 
             // Get attendance dates
-            $dateStmt = $this->db->prepare("SELECT DISTINCT attendance_date FROM attendance WHERE subject_id = ? ORDER BY attendance_date DESC LIMIT 15");
+            $dateStmt = $this->db->prepare("SELECT DISTINCT date FROM attendance WHERE subject_id = ? ORDER BY date DESC LIMIT 15");
             $dateStmt->bind_param("i", $courseId);
             $dateStmt->execute();
             $dates = [];
             $res = $dateStmt->get_result();
-            while($r = $res->fetch_assoc()) $dates[] = $r['attendance_date'];
+            while($r = $res->fetch_assoc()) $dates[] = $r['date'];
             $dateStmt->close();
             $data['attendance_dates'] = $dates;
 
             // Get attendance matrix
             $matrix = [];
             if (!empty($dates)) {
-                $matStmt = $this->db->prepare("SELECT student_id, attendance_date, status FROM attendance WHERE subject_id = ? AND attendance_date >= ? AND attendance_date <= ?");
+                $matStmt = $this->db->prepare("SELECT student_id, date, status FROM attendance WHERE subject_id = ? AND date >= ? AND date <= ?");
                 $minDate = end($dates);
                 $maxDate = $dates[0];
                 $matStmt->bind_param("iss", $courseId, $minDate, $maxDate);
                 $matStmt->execute();
                 $res = $matStmt->get_result();
                 while($r = $res->fetch_assoc()) {
-                    $matrix[$r['student_id']][$r['attendance_date']] = $r['status'];
+                    $matrix[$r['student_id']][$r['date']] = $r['status'];
                 }
                 $matStmt->close();
             }
@@ -401,7 +419,7 @@ class CourseController extends Controller {
 
         } else {
             // Student View
-            $logStmt = $this->db->prepare("SELECT attendance_date as date, status FROM attendance WHERE subject_id = ? AND student_id = ? ORDER BY attendance_date DESC");
+            $logStmt = $this->db->prepare("SELECT date, status FROM attendance WHERE subject_id = ? AND student_id = ? ORDER BY date DESC");
             $logStmt->bind_param("ii", $courseId, $_SESSION['user_id']);
             $logStmt->execute();
             $data['attendance_log'] = $logStmt->get_result()->fetch_all(MYSQLI_ASSOC);
@@ -441,8 +459,8 @@ class CourseController extends Controller {
         if (!$course) $this->redirect('/dashboard');
 
         $data = [
-            'userRole' => $_SESSION['role'],
-            'userName' => $_SESSION['name'],
+            'userRole' => $_SESSION['user_role'],
+            'userName' => $_SESSION['user_name'],
             'course' => $course,
         ];
 
@@ -455,7 +473,7 @@ class CourseController extends Controller {
         $avatarStmt->close();
 
         // Get all enrolled students
-        $stuStmt = $this->db->prepare("SELECT u.id, u.name, u.email, u.roll_no, u.avatar_path FROM users u JOIN enrollments e ON u.id = e.student_id WHERE e.subject_id = ? ORDER BY u.name ASC");
+        $stuStmt = $this->db->prepare("SELECT u.id, u.name, u.email, u.avatar_path FROM users u JOIN enrollments e ON u.id = e.student_id WHERE e.subject_id = ? ORDER BY u.name ASC");
         $stuStmt->bind_param("i", $courseId);
         $stuStmt->execute();
         $data['enrolled_students'] = $stuStmt->get_result()->fetch_all(MYSQLI_ASSOC);
@@ -473,9 +491,9 @@ class CourseController extends Controller {
 
         if (!empty($date) && !empty($attendanceData)) {
             // Check if record exists
-            $checkStmt = $this->db->prepare("SELECT id FROM attendance WHERE subject_id = ? AND student_id = ? AND attendance_date = ?");
+            $checkStmt = $this->db->prepare("SELECT id FROM attendance WHERE subject_id = ? AND student_id = ? AND date = ?");
             $updateStmt = $this->db->prepare("UPDATE attendance SET status = ? WHERE id = ?");
-            $insertStmt = $this->db->prepare("INSERT INTO attendance (subject_id, student_id, attendance_date, status) VALUES (?, ?, ?, ?)");
+            $insertStmt = $this->db->prepare("INSERT INTO attendance (subject_id, student_id, date, status) VALUES (?, ?, ?, ?)");
 
             foreach ($attendanceData as $studentId => $status) {
                 $studentId = (int)$studentId;
@@ -499,5 +517,67 @@ class CourseController extends Controller {
         }
 
         $this->redirect('/course/attendance?id=' . $courseId);
+    }
+
+    public function manageEnrollments(Request $request, Response $response): void {
+        $courseId = (int)$request->get('id');
+        if (!$courseId || $_SESSION['user_role'] !== 'teacher' || !$this->verifyTeacherAccess($courseId)) {
+            $this->redirect('/dashboard');
+        }
+
+        // Fetch Course Details
+        $stmt = $this->db->prepare("SELECT id, name, code, description FROM subjects WHERE id = ?");
+        $stmt->bind_param("i", $courseId);
+        $stmt->execute();
+        $course = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$course) {
+            $this->redirect('/dashboard');
+        }
+
+        $data = [
+            'userRole' => $_SESSION['user_role'],
+            'userName' => $_SESSION['user_name'],
+            'userEmail' => $_SESSION['user_email'],
+            'course' => $course,
+            'enrolledStudents' => [],
+            'allStudents' => []
+        ];
+
+        // Fetch user avatar
+        $avatarStmt = $this->db->prepare("SELECT avatar_path FROM users WHERE id = ?");
+        $avatarStmt->bind_param("i", $_SESSION['user_id']);
+        $avatarStmt->execute();
+        $avatarRes = $avatarStmt->get_result();
+        $data['userAvatar'] = ($avatarRes && $avatarRes->num_rows > 0) ? $avatarRes->fetch_assoc()['avatar_path'] : null;
+        $avatarStmt->close();
+
+        // Fetch enrolled students
+        $enrolledStmt = $this->db->prepare("
+            SELECT u.id, u.name, u.email, e.enrolled_at
+            FROM users u
+            JOIN enrollments e ON u.id = e.student_id
+            WHERE e.subject_id = ?
+        ");
+        $enrolledStmt->bind_param("i", $courseId);
+        $enrolledStmt->execute();
+        $enrolledRes = $enrolledStmt->get_result();
+        if ($enrolledRes) {
+            while ($student = $enrolledRes->fetch_assoc()) {
+                $data['enrolledStudents'][] = $student;
+            }
+        }
+        $enrolledStmt->close();
+
+        // Fetch all students
+        $stuRes = $this->db->query("SELECT id, name, email FROM users WHERE role = 'student'");
+        if ($stuRes) {
+            while ($stu = $stuRes->fetch_assoc()) {
+                $data['allStudents'][] = $stu;
+            }
+        }
+
+        $this->render('course-enrollments', $data);
     }
 }

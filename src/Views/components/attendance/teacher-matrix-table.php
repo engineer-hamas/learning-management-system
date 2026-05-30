@@ -16,7 +16,7 @@
                                         <tr>
                                             <td class="student-col">
                                                 <?= e($stu['name']) ?>
-                                                <?php if (!empty($stu['roll_no'])): ?>
+                                                <?php if (!empty($stu['roll_no'] ?? null)): ?>
                                                     <span class="roll-no-label">(<?= e($stu['roll_no']) ?>)</span>
                                                 <?php endif; ?>
                                             </td>

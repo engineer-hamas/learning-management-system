@@ -13,8 +13,8 @@ abstract class Controller {
      * @param string $view View filename (without extension)
      * @param array $data Associative array of values
      */
-    protected function render(string $view, array $data = []): void {
-        (new Response())->render($view, $data);
+    protected function render(string $view, array $data = [], ?string $layout = 'app'): void {
+        (new Response())->render($view, $data, $layout ?? 'app');
     }
 
     /**

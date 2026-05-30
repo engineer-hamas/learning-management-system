@@ -1,0 +1,98 @@
+@use "variables" as *;
+@use "mixins" as *;
+
+// ==========================================
+// 🔘 UI Kit: Buttons
+// ==========================================
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.2s ease;
+
+  // Primary variant
+  &--primary {
+    background: var(--color-primary);
+    color: #fff;
+
+    // Shine effect
+    &::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 50%;
+      height: 100%;
+      background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0) 100%);
+      transform: skewX(-25deg);
+      transition: all 0.5s ease;
+    }
+
+    &:hover {
+      background: var(--color-primary-hover);
+      box-shadow: 0 4px 12px rgba(var(--color-primary-rgb, 37,99,235), 0.3);
+      &::after { left: 120%; }
+    }
+  }
+
+  // Ghost variant
+  &--ghost {
+    background: transparent;
+    color: var(--color-text-main);
+    border: 1px solid var(--color-border);
+
+    &:hover {
+      background: var(--color-bg);
+      border-color: var(--color-text-muted);
+    }
+  }
+
+  // Destructive variant
+  &--destructive {
+    background: transparent;
+    color: var(--color-danger);
+
+    &:hover {
+      background: rgba(var(--color-danger-rgb, 239,68,68), 0.1);
+      text-decoration: underline;
+    }
+  }
+
+  // Link variant
+  &--link {
+    background: none;
+    padding: 0;
+    color: var(--color-primary);
+    font-weight: 500;
+    
+    &:hover {
+      color: var(--color-primary-hover);
+      text-decoration: underline;
+    }
+  }
+
+  // Icon-only variant
+  &--icon {
+    padding: 8px;
+    border-radius: 50%;
+    color: var(--color-text-muted);
+    background: transparent;
+
+    &:hover {
+      background: var(--color-border);
+      color: var(--color-text-main);
+    }
+  }
+}

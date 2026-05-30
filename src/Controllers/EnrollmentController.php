@@ -145,7 +145,8 @@ class EnrollmentController extends Controller {
             $_SESSION['enroll_error'] = "Failed to enroll student.";
         }
         $insStmt->close();
-        $this->redirect('/enrollments');
+        $redirectUrl = $_SERVER['HTTP_REFERER'] ?? '/enrollments';
+        $this->redirect($redirectUrl);
     }
 
     public function removeStudent(Request $request, Response $response): void {
@@ -183,6 +184,7 @@ class EnrollmentController extends Controller {
             $_SESSION['enroll_error'] = "Failed to remove student.";
         }
         $delStmt->close();
-        $this->redirect('/enrollments');
+        $redirectUrl = $_SERVER['HTTP_REFERER'] ?? '/enrollments';
+        $this->redirect($redirectUrl);
     }
 }
