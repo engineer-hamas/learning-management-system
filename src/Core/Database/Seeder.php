@@ -67,5 +67,38 @@ class Seeder {
                 $stmt->close();
             }
         }
+
+        // Users
+        $userCount = $conn->query("SELECT COUNT(*) as count FROM `users`")->fetch_assoc()['count'];
+        if ($userCount == 0) {
+            $hashedPassword = password_hash('password', PASSWORD_DEFAULT);
+            $stmt = $conn->prepare("INSERT INTO `users` (`name`, `email`, `password`, `role`) VALUES (?, ?, ?, ?)");
+            
+            $users = [
+                ['Admin User', 'admin@example.com', 'admin'],
+                ['Teacher One', 'teacher1@example.com', 'teacher'],
+                ['Teacher Two', 'teacher2@example.com', 'teacher'],
+                ['Student One', 'student1@example.com', 'student'],
+                ['Student Two', 'student2@example.com', 'student'],
+                ['Student Three', 'student3@example.com', 'student']
+            ];
+
+            foreach ($users as $u) {
+                $name = $u[0];
+                $email = $u[1];
+                $role = $u[2];
+                $stmt->bind_param("ssss", $name, $email, $hashedPassword, $role);
+                $stmt->execute();
+                
+                $userId = $stmt->insert_id;
+                
+                if ($role === 'teacher') {
+                    $conn->query("INSERT INTO `teachers` (`user_id`) VALUES ($userId)");
+                } elseif ($role === 'student') {
+                    $conn->query("INSERT INTO `students` (`user_id`) VALUES ($userId)");
+                }
+            }
+            $stmt->close();
+        }
     }
 }

@@ -2,15 +2,28 @@
 namespace App\Controllers;
 
 use App\Core\Controller;
-use App\Core\Database;
 use App\Core\Request;
 use App\Core\Response;
+use App\Models\User;
+use App\Models\Course;
+use App\Models\CourseMaterial;
+use App\Models\Enrollment;
+use App\Models\Attendance;
 
 class CourseController extends Controller {
-    private $db;
+    private User $userModel;
+    private Course $courseModel;
+    private CourseMaterial $materialModel;
+    private Enrollment $enrollmentModel;
+    private Attendance $attendanceModel;
 
     public function __construct() {
-        $this->db = Database::getConnection();
+        $this->userModel = new User();
+        $this->courseModel = new Course();
+        $this->materialModel = new CourseMaterial();
+        $this->enrollmentModel = new Enrollment();
+        $this->attendanceModel = new Attendance();
+
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
@@ -28,139 +41,49 @@ class CourseController extends Controller {
         $userId = $_SESSION['user_id'];
         $role = $_SESSION['user_role'];
 
-        // Strict Access Control check: Ensure teacher teaches it, or student is enrolled in it
         if ($role === 'teacher') {
-            $checkStmt = $this->db->prepare("SELECT 1 FROM teacher_subjects WHERE teacher_id = ? AND subject_id = ?");
+            $hasAccess = $this->courseModel->verifyTeacherAccess($userId, $courseId);
         } else {
-            $checkStmt = $this->db->prepare("SELECT 1 FROM enrollments WHERE student_id = ? AND subject_id = ?");
+            $hasAccess = $this->courseModel->verifyStudentEnrollment($userId, $courseId);
         }
-        $checkStmt->bind_param("ii", $userId, $courseId);
-        $checkStmt->execute();
-        $hasAccess = $checkStmt->get_result()->num_rows > 0;
-        $checkStmt->close();
 
         if (!$hasAccess) {
             $this->redirect('/enrollments');
         }
 
-        // Fetch Course Details
-        $stmt = $this->db->prepare("SELECT id, name, code, description FROM subjects WHERE id = ?");
-        $stmt->bind_param("i", $courseId);
-        $stmt->execute();
-        $course = $stmt->get_result()->fetch_assoc();
-        $stmt->close();
-
+        $course = $this->courseModel->getById($courseId);
         if (!$course) {
             $this->redirect('/dashboard');
         }
+
+        $user = $this->userModel->findById($userId);
 
         $data = [
             'userRole' => $role,
             'userName' => $_SESSION['user_name'],
             'userEmail' => $_SESSION['user_email'],
+            'userAvatar' => $user['avatar_path'] ?? null,
             'course' => $course,
-            'materials' => [],
-            'assignments' => [],
-            'exams' => [],
-            'quizzes' => [],
-            'enrolledStudents' => [],
-            'allStudents' => []
+            'materials' => $this->materialModel->getMaterials($courseId),
+            'assignments' => $this->materialModel->getAssignments($courseId),
+            'exams' => $this->materialModel->getExams($courseId),
+            'quizzes' => $this->materialModel->getQuizzes($courseId),
+            'enrolledStudents' => $this->enrollmentModel->getEnrolledStudents($courseId),
+            'allStudents' => $role === 'teacher' ? $this->userModel->getByRole('student') : []
         ];
-
-        // Fetch enrolled students for this course
-        $enrolledStmt = $this->db->prepare("
-            SELECT u.id, u.name, u.email, e.enrolled_at
-            FROM users u
-            JOIN enrollments e ON u.id = e.student_id
-            WHERE e.subject_id = ?
-        ");
-        $enrolledStmt->bind_param("i", $courseId);
-        $enrolledStmt->execute();
-        $enrolledRes = $enrolledStmt->get_result();
-        if ($enrolledRes) {
-            while ($student = $enrolledRes->fetch_assoc()) {
-                $data['enrolledStudents'][] = $student;
-            }
-        }
-        $enrolledStmt->close();
-
-        // Fetch all students if teacher
-        if ($role === 'teacher') {
-            $stuRes = $this->db->query("SELECT id, name, email FROM users WHERE role = 'student'");
-            if ($stuRes) {
-                while ($stu = $stuRes->fetch_assoc()) {
-                    $data['allStudents'][] = $stu;
-                }
-            }
-        }
-
-        // Fetch user avatar
-        $avatarStmt = $this->db->prepare("SELECT avatar_path FROM users WHERE id = ?");
-        $avatarStmt->bind_param("i", $userId);
-        $avatarStmt->execute();
-        $avatarRes = $avatarStmt->get_result();
-        $data['userAvatar'] = ($avatarRes && $avatarRes->num_rows > 0) ? $avatarRes->fetch_assoc()['avatar_path'] : null;
-        $avatarStmt->close();
-
-        // Query new course content tables
-        $matStmt = $this->db->prepare("SELECT id, title, file_path, original_filename, created_at FROM course_materials WHERE subject_id = ? ORDER BY created_at DESC");
-        $matStmt->bind_param("i", $courseId);
-        $matStmt->execute();
-        $matRes = $matStmt->get_result();
-        if ($matRes) {
-            while ($row = $matRes->fetch_assoc()) $data['materials'][] = $row;
-        }
-        $matStmt->close();
-
-        $assStmt = $this->db->prepare("SELECT id, title, description, due_date, file_path, original_filename FROM assignments WHERE subject_id = ? ORDER BY due_date ASC");
-        $assStmt->bind_param("i", $courseId);
-        $assStmt->execute();
-        $assRes = $assStmt->get_result();
-        if ($assRes) {
-            while ($row = $assRes->fetch_assoc()) $data['assignments'][] = $row;
-        }
-        $assStmt->close();
-
-        $exStmt = $this->db->prepare("SELECT id, title, exam_date, duration_minutes, file_path, original_filename FROM exams WHERE subject_id = ? ORDER BY exam_date ASC");
-        $exStmt->bind_param("i", $courseId);
-        $exStmt->execute();
-        $exRes = $exStmt->get_result();
-        if ($exRes) {
-            while ($row = $exRes->fetch_assoc()) $data['exams'][] = $row;
-        }
-        $exStmt->close();
-
-        $qzStmt = $this->db->prepare("SELECT id, title, description, file_path, original_filename, created_at FROM quizzes WHERE subject_id = ? ORDER BY created_at DESC");
-        $qzStmt->bind_param("i", $courseId);
-        $qzStmt->execute();
-        $qzRes = $qzStmt->get_result();
-        if ($qzRes) {
-            while ($row = $qzRes->fetch_assoc()) $data['quizzes'][] = $row;
-        }
-        $qzStmt->close();
 
         $this->render('course', $data);
     }
 
     private function verifyTeacherAccess(int $courseId): bool {
         if ($_SESSION['user_role'] !== 'teacher') return false;
-        $stmt = $this->db->prepare("SELECT 1 FROM teacher_subjects WHERE teacher_id = ? AND subject_id = ?");
-        $stmt->bind_param("ii", $_SESSION['user_id'], $courseId);
-        $stmt->execute();
-        $hasAccess = $stmt->get_result()->num_rows > 0;
-        $stmt->close();
-        return $hasAccess;
-    }
-    private function verifyStudentEnrollment(int $courseId): bool {
-        if ($_SESSION['user_role'] !== 'student') return false;
-        $stmt = $this->db->prepare("SELECT 1 FROM enrollments WHERE student_id = ? AND subject_id = ?");
-        $stmt->bind_param("ii", $_SESSION['user_id'], $courseId);
-        $stmt->execute();
-        $hasAccess = $stmt->get_result()->num_rows > 0;
-        $stmt->close();
-        return $hasAccess;
+        return $this->courseModel->verifyTeacherAccess($_SESSION['user_id'], $courseId);
     }
 
+    private function verifyStudentEnrollment(int $courseId): bool {
+        if ($_SESSION['user_role'] !== 'student') return false;
+        return $this->courseModel->verifyStudentEnrollment($_SESSION['user_id'], $courseId);
+    }
 
     private function handleFileUpload(string $subDir, string $savedFilename): array {
         if (!isset($_FILES['content_file']) || $_FILES['content_file']['error'] !== UPLOAD_ERR_OK) {
@@ -200,10 +123,7 @@ class CourseController extends Controller {
         list($dbPath, $originalName) = $this->handleFileUpload('materials', $savedFilename);
         
         if ($dbPath) {
-            $stmt = $this->db->prepare("INSERT INTO course_materials (subject_id, teacher_id, title, file_path, original_filename) VALUES (?, ?, ?, ?, ?)");
-            $stmt->bind_param("iisss", $courseId, $_SESSION['user_id'], $title, $dbPath, $originalName);
-            $stmt->execute();
-            $stmt->close();
+            $this->materialModel->addMaterial($courseId, $_SESSION['user_id'], $title, $dbPath, $originalName);
         }
         $redirectUrl = $_SERVER['HTTP_REFERER'] ?? '/course?id=' . $courseId;
         $this->redirect($redirectUrl);
@@ -226,10 +146,7 @@ class CourseController extends Controller {
 
         list($dbPath, $originalName) = $this->handleFileUpload('assignments', $savedFilename);
 
-        $stmt = $this->db->prepare("INSERT INTO assignments (subject_id, teacher_id, title, description, due_date, file_path, original_filename) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        $stmt->bind_param("iisssss", $courseId, $_SESSION['user_id'], $title, $desc, $dueDate, $dbPath, $originalName);
-        $stmt->execute();
-        $stmt->close();
+        $this->materialModel->addAssignment($courseId, $_SESSION['user_id'], $title, $desc, $dueDate, $dbPath, $originalName);
         
         $redirectUrl = $_SERVER['HTTP_REFERER'] ?? '/course?id=' . $courseId;
         $this->redirect($redirectUrl);
@@ -246,13 +163,8 @@ class CourseController extends Controller {
 
         if ($examDate) {
             $examDate = str_replace('T', ' ', $examDate) . ':00';
-            
             list($dbPath, $originalName) = $this->handleFileUpload('exams', $savedFilename);
-            
-            $stmt = $this->db->prepare("INSERT INTO exams (subject_id, teacher_id, title, exam_date, duration_minutes, file_path, original_filename) VALUES (?, ?, ?, ?, ?, ?, ?)");
-            $stmt->bind_param("iississ", $courseId, $_SESSION['user_id'], $title, $examDate, $duration, $dbPath, $originalName);
-            $stmt->execute();
-            $stmt->close();
+            $this->materialModel->addExam($courseId, $_SESSION['user_id'], $title, $examDate, $duration, $dbPath, $originalName);
         }
         
         $redirectUrl = $_SERVER['HTTP_REFERER'] ?? '/course?id=' . $courseId;
@@ -269,17 +181,15 @@ class CourseController extends Controller {
 
         list($dbPath, $originalName) = $this->handleFileUpload('quizzes', $savedFilename);
 
-        $stmt = $this->db->prepare("INSERT INTO quizzes (subject_id, teacher_id, title, description, file_path, original_filename) VALUES (?, ?, ?, ?, ?, ?)");
-        $stmt->bind_param("iissss", $courseId, $_SESSION['user_id'], $title, $desc, $dbPath, $originalName);
-        $stmt->execute();
-        $stmt->close();
+        $this->materialModel->addQuiz($courseId, $_SESSION['user_id'], $title, $desc, $dbPath, $originalName);
         
         $redirectUrl = $_SERVER['HTTP_REFERER'] ?? '/course?id=' . $courseId;
         $this->redirect($redirectUrl);
     }
 
     private function deletePhysicalFile(string $table, int $id, int $courseId): void {
-        $stmt = $this->db->prepare("SELECT file_path FROM " . $table . " WHERE id = ? AND subject_id = ?");
+        $db = \App\Core\Database::getConnection();
+        $stmt = $db->prepare("SELECT file_path FROM " . $table . " WHERE id = ? AND subject_id = ?");
         $stmt->bind_param("ii", $id, $courseId);
         $stmt->execute();
         $res = $stmt->get_result();
@@ -300,11 +210,8 @@ class CourseController extends Controller {
         $id = (int)$request->post('id');
         
         $this->deletePhysicalFile('course_materials', $id, $courseId);
-
-        $stmt = $this->db->prepare("DELETE FROM course_materials WHERE id = ? AND subject_id = ?");
-        $stmt->bind_param("ii", $id, $courseId);
-        $stmt->execute();
-        $stmt->close();
+        $this->materialModel->deleteMaterial($id, $courseId);
+        
         $redirectUrl = $_SERVER['HTTP_REFERER'] ?? '/course?id=' . $courseId;
         $this->redirect($redirectUrl);
     }
@@ -315,11 +222,8 @@ class CourseController extends Controller {
         $id = (int)$request->post('id');
         
         $this->deletePhysicalFile('assignments', $id, $courseId);
-
-        $stmt = $this->db->prepare("DELETE FROM assignments WHERE id = ? AND subject_id = ?");
-        $stmt->bind_param("ii", $id, $courseId);
-        $stmt->execute();
-        $stmt->close();
+        $this->materialModel->deleteAssignment($id, $courseId);
+        
         $redirectUrl = $_SERVER['HTTP_REFERER'] ?? '/course?id=' . $courseId;
         $this->redirect($redirectUrl);
     }
@@ -330,11 +234,8 @@ class CourseController extends Controller {
         $id = (int)$request->post('id');
         
         $this->deletePhysicalFile('exams', $id, $courseId);
-
-        $stmt = $this->db->prepare("DELETE FROM exams WHERE id = ? AND subject_id = ?");
-        $stmt->bind_param("ii", $id, $courseId);
-        $stmt->execute();
-        $stmt->close();
+        $this->materialModel->deleteExam($id, $courseId);
+        
         $redirectUrl = $_SERVER['HTTP_REFERER'] ?? '/course?id=' . $courseId;
         $this->redirect($redirectUrl);
     }
@@ -345,11 +246,8 @@ class CourseController extends Controller {
         $id = (int)$request->post('id');
         
         $this->deletePhysicalFile('quizzes', $id, $courseId);
-
-        $stmt = $this->db->prepare("DELETE FROM quizzes WHERE id = ? AND subject_id = ?");
-        $stmt->bind_param("ii", $id, $courseId);
-        $stmt->execute();
-        $stmt->close();
+        $this->materialModel->deleteQuiz($id, $courseId);
+        
         $redirectUrl = $_SERVER['HTTP_REFERER'] ?? '/course?id=' . $courseId;
         $this->redirect($redirectUrl);
     }
@@ -360,70 +258,30 @@ class CourseController extends Controller {
             $this->redirect('/dashboard');
         }
 
-        $stmt = $this->db->prepare("SELECT id, name, code, description FROM subjects WHERE id = ?");
-        $stmt->bind_param("i", $courseId);
-        $stmt->execute();
-        $res = $stmt->get_result();
-        $course = $res->fetch_assoc();
-        $stmt->close();
-
+        $course = $this->courseModel->getById($courseId);
         if (!$course) $this->redirect('/dashboard');
+
+        $user = $this->userModel->findById($_SESSION['user_id']);
 
         $data = [
             'userRole' => $_SESSION['user_role'],
             'userName' => $_SESSION['user_name'],
             'course' => $course,
+            'userAvatar' => $user['avatar_path'] ?? null
         ];
 
-        // Avatar
-        $avatarStmt = $this->db->prepare("SELECT avatar_path FROM users WHERE id = ?");
-        $avatarStmt->bind_param("i", $_SESSION['user_id']);
-        $avatarStmt->execute();
-        $avatarRes = $avatarStmt->get_result();
-        $data['userAvatar'] = ($avatarRes && $avatarRes->num_rows > 0) ? $avatarRes->fetch_assoc()['avatar_path'] : null;
-        $avatarStmt->close();
-
         if ($_SESSION['user_role'] === 'teacher') {
-            // Get all enrolled students
-            $stuStmt = $this->db->prepare("SELECT u.id, u.name, u.email, u.avatar_path FROM users u JOIN enrollments e ON u.id = e.student_id WHERE e.subject_id = ? ORDER BY u.name ASC");
-            $stuStmt->bind_param("i", $courseId);
-            $stuStmt->execute();
-            $data['students'] = $stuStmt->get_result()->fetch_all(MYSQLI_ASSOC);
-            $stuStmt->close();
-
-            // Get attendance dates
-            $dateStmt = $this->db->prepare("SELECT DISTINCT date FROM attendance WHERE subject_id = ? ORDER BY date DESC LIMIT 15");
-            $dateStmt->bind_param("i", $courseId);
-            $dateStmt->execute();
-            $dates = [];
-            $res = $dateStmt->get_result();
-            while($r = $res->fetch_assoc()) $dates[] = $r['date'];
-            $dateStmt->close();
-            $data['attendance_dates'] = $dates;
-
-            // Get attendance matrix
-            $matrix = [];
-            if (!empty($dates)) {
-                $matStmt = $this->db->prepare("SELECT student_id, date, status FROM attendance WHERE subject_id = ? AND date >= ? AND date <= ?");
-                $minDate = end($dates);
-                $maxDate = $dates[0];
-                $matStmt->bind_param("iss", $courseId, $minDate, $maxDate);
-                $matStmt->execute();
-                $res = $matStmt->get_result();
-                while($r = $res->fetch_assoc()) {
-                    $matrix[$r['student_id']][$r['date']] = $r['status'];
-                }
-                $matStmt->close();
+            $data['students'] = $this->enrollmentModel->getEnrolledStudents($courseId);
+            $data['attendance_dates'] = $this->attendanceModel->getRecentDates($courseId);
+            
+            $data['attendance_matrix'] = [];
+            if (!empty($data['attendance_dates'])) {
+                $minDate = end($data['attendance_dates']);
+                $maxDate = $data['attendance_dates'][0];
+                $data['attendance_matrix'] = $this->attendanceModel->getMatrix($courseId, $minDate, $maxDate);
             }
-            $data['attendance_matrix'] = $matrix;
-
         } else {
-            // Student View
-            $logStmt = $this->db->prepare("SELECT date, status FROM attendance WHERE subject_id = ? AND student_id = ? ORDER BY date DESC");
-            $logStmt->bind_param("ii", $courseId, $_SESSION['user_id']);
-            $logStmt->execute();
-            $data['attendance_log'] = $logStmt->get_result()->fetch_all(MYSQLI_ASSOC);
-            $logStmt->close();
+            $data['attendance_log'] = $this->attendanceModel->getStudentLog($courseId, $_SESSION['user_id']);
 
             $total = count($data['attendance_log']);
             $present = $late = $absent = 0;
@@ -450,34 +308,18 @@ class CourseController extends Controller {
         $courseId = (int)$request->get('id');
         if (!$this->verifyTeacherAccess($courseId)) $this->redirect('/dashboard');
 
-        $stmt = $this->db->prepare("SELECT id, name, code, description FROM subjects WHERE id = ?");
-        $stmt->bind_param("i", $courseId);
-        $stmt->execute();
-        $course = $stmt->get_result()->fetch_assoc();
-        $stmt->close();
-
+        $course = $this->courseModel->getById($courseId);
         if (!$course) $this->redirect('/dashboard');
+
+        $user = $this->userModel->findById($_SESSION['user_id']);
 
         $data = [
             'userRole' => $_SESSION['user_role'],
             'userName' => $_SESSION['user_name'],
             'course' => $course,
+            'userAvatar' => $user['avatar_path'] ?? null,
+            'enrolled_students' => $this->enrollmentModel->getEnrolledStudents($courseId)
         ];
-
-        // Avatar
-        $avatarStmt = $this->db->prepare("SELECT avatar_path FROM users WHERE id = ?");
-        $avatarStmt->bind_param("i", $_SESSION['user_id']);
-        $avatarStmt->execute();
-        $avatarRes = $avatarStmt->get_result();
-        $data['userAvatar'] = ($avatarRes && $avatarRes->num_rows > 0) ? $avatarRes->fetch_assoc()['avatar_path'] : null;
-        $avatarStmt->close();
-
-        // Get all enrolled students
-        $stuStmt = $this->db->prepare("SELECT u.id, u.name, u.email, u.avatar_path FROM users u JOIN enrollments e ON u.id = e.student_id WHERE e.subject_id = ? ORDER BY u.name ASC");
-        $stuStmt->bind_param("i", $courseId);
-        $stuStmt->execute();
-        $data['enrolled_students'] = $stuStmt->get_result()->fetch_all(MYSQLI_ASSOC);
-        $stuStmt->close();
 
         $this->render('take-attendance', $data);
     }
@@ -487,33 +329,14 @@ class CourseController extends Controller {
         if (!$this->verifyTeacherAccess($courseId)) $this->redirect('/dashboard');
 
         $date = $request->post('attendance_date');
-        $attendanceData = $request->post('attendance') ?? []; // array of student_id => status
+        $attendanceData = $request->post('attendance') ?? [];
 
         if (!empty($date) && !empty($attendanceData)) {
-            // Check if record exists
-            $checkStmt = $this->db->prepare("SELECT id FROM attendance WHERE subject_id = ? AND student_id = ? AND date = ?");
-            $updateStmt = $this->db->prepare("UPDATE attendance SET status = ? WHERE id = ?");
-            $insertStmt = $this->db->prepare("INSERT INTO attendance (subject_id, student_id, date, status) VALUES (?, ?, ?, ?)");
-
             foreach ($attendanceData as $studentId => $status) {
                 $studentId = (int)$studentId;
                 if (!in_array($status, ['present', 'late', 'absent'])) continue;
-
-                $checkStmt->bind_param("iis", $courseId, $studentId, $date);
-                $checkStmt->execute();
-                $res = $checkStmt->get_result();
-                
-                if ($row = $res->fetch_assoc()) {
-                    $updateStmt->bind_param("si", $status, $row['id']);
-                    $updateStmt->execute();
-                } else {
-                    $insertStmt->bind_param("iiss", $courseId, $studentId, $date, $status);
-                    $insertStmt->execute();
-                }
+                $this->attendanceModel->upsertRecord($courseId, $studentId, $date, $status);
             }
-            $checkStmt->close();
-            $updateStmt->close();
-            $insertStmt->close();
         }
 
         $this->redirect('/course/attendance?id=' . $courseId);
@@ -525,58 +348,22 @@ class CourseController extends Controller {
             $this->redirect('/dashboard');
         }
 
-        // Fetch Course Details
-        $stmt = $this->db->prepare("SELECT id, name, code, description FROM subjects WHERE id = ?");
-        $stmt->bind_param("i", $courseId);
-        $stmt->execute();
-        $course = $stmt->get_result()->fetch_assoc();
-        $stmt->close();
-
+        $course = $this->courseModel->getById($courseId);
         if (!$course) {
             $this->redirect('/dashboard');
         }
+
+        $user = $this->userModel->findById($_SESSION['user_id']);
 
         $data = [
             'userRole' => $_SESSION['user_role'],
             'userName' => $_SESSION['user_name'],
             'userEmail' => $_SESSION['user_email'],
+            'userAvatar' => $user['avatar_path'] ?? null,
             'course' => $course,
-            'enrolledStudents' => [],
-            'allStudents' => []
+            'enrolledStudents' => $this->enrollmentModel->getEnrolledStudents($courseId),
+            'allStudents' => $this->userModel->getByRole('student')
         ];
-
-        // Fetch user avatar
-        $avatarStmt = $this->db->prepare("SELECT avatar_path FROM users WHERE id = ?");
-        $avatarStmt->bind_param("i", $_SESSION['user_id']);
-        $avatarStmt->execute();
-        $avatarRes = $avatarStmt->get_result();
-        $data['userAvatar'] = ($avatarRes && $avatarRes->num_rows > 0) ? $avatarRes->fetch_assoc()['avatar_path'] : null;
-        $avatarStmt->close();
-
-        // Fetch enrolled students
-        $enrolledStmt = $this->db->prepare("
-            SELECT u.id, u.name, u.email, e.enrolled_at
-            FROM users u
-            JOIN enrollments e ON u.id = e.student_id
-            WHERE e.subject_id = ?
-        ");
-        $enrolledStmt->bind_param("i", $courseId);
-        $enrolledStmt->execute();
-        $enrolledRes = $enrolledStmt->get_result();
-        if ($enrolledRes) {
-            while ($student = $enrolledRes->fetch_assoc()) {
-                $data['enrolledStudents'][] = $student;
-            }
-        }
-        $enrolledStmt->close();
-
-        // Fetch all students
-        $stuRes = $this->db->query("SELECT id, name, email FROM users WHERE role = 'student'");
-        if ($stuRes) {
-            while ($stu = $stuRes->fetch_assoc()) {
-                $data['allStudents'][] = $stu;
-            }
-        }
 
         $this->render('course-enrollments', $data);
     }

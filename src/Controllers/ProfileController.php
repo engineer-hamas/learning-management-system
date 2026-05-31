@@ -6,16 +6,20 @@ use App\Core\Database;
 use App\Core\Request;
 use App\Core\Response;
 
+use App\Models\User;
+
 /**
  * Class ProfileController
  * 
  * Manages user profile settings, secure file uploads, role-specific mappings, and account security.
  */
 class ProfileController extends Controller {
-    private $db;
+    private User $userModel;
+    private \mysqli $db;
 
     public function __construct() {
-        $this->db = Database::getConnection();
+        $this->userModel = new User();
+        $this->db = \App\Core\Database::getConnection();
     }
 
     /**
@@ -42,28 +46,11 @@ class ProfileController extends Controller {
         $userId = $_SESSION['user_id'];
 
         // 1. Fetch fresh user info from the database
-        $stmt = $this->db->prepare("
-            SELECT u.id, u.name, u.email, u.role, u.avatar_path, u.phone, u.bio, 
-                   u.notify_email, u.notify_class_alerts, u.notify_marketing,
-                   t.department_id as t_dept, t.title, t.office_hours, t.specialization,
-                   s.department_id as s_dept, s.student_id, s.expected_graduation, s.study_style
-            FROM users u
-            LEFT JOIN teachers t ON u.id = t.user_id
-            LEFT JOIN students s ON u.id = s.user_id
-            WHERE u.id = ?
-        ");
-        if (!$stmt) {
-            die("Database error during profile fetch: " . $this->db->error);
-        }
-        $stmt->bind_param("i", $userId);
-        $stmt->execute();
-        $userResult = $stmt->get_result();
+        $user = $this->userModel->getFullProfile($userId);
         
-        if ($userResult->num_rows !== 1) {
+        if (!$user) {
             die("User record not found.");
         }
-        $user = $userResult->fetch_assoc();
-        $stmt->close();
         
         // Map the correct department_id based on role
         if ($user['role'] === 'teacher') {
@@ -169,17 +156,12 @@ class ProfileController extends Controller {
             }
 
             // Check email uniqueness for other users
-            $stmt = $this->db->prepare("SELECT id FROM users WHERE email = ? AND id != ?");
-            $stmt->bind_param("si", $email, $userId);
-            $stmt->execute();
-            $stmt->store_result();
-            if ($stmt->num_rows > 0) {
+            $existingUser = $this->userModel->findByEmail($email);
+            if ($existingUser && $existingUser['id'] !== $userId) {
                 $_SESSION['settings_error'] = "This email is already in use by another account.";
                 $_SESSION['settings_active_tab'] = "general";
-                $stmt->close();
                 $this->redirect('/settings');
             }
-            $stmt->close();
 
             // 1. Process custom Profile Image Upload
             $avatarPath = null;
@@ -245,23 +227,13 @@ class ProfileController extends Controller {
             }
 
             // Update database record for general fields
-            if ($avatarPath !== null) {
-                $updateQuery = "UPDATE users SET name = ?, email = ?, phone = ?, bio = ?, avatar_path = ? WHERE id = ?";
-                $stmt = $this->db->prepare($updateQuery);
-                $stmt->bind_param("sssssi", $name, $email, $phone, $bio, $avatarPath, $userId);
-            } else {
-                $updateQuery = "UPDATE users SET name = ?, email = ?, phone = ?, bio = ? WHERE id = ?";
-                $stmt = $this->db->prepare($updateQuery);
-                $stmt->bind_param("ssssi", $name, $email, $phone, $bio, $userId);
-            }
+            $success = $this->userModel->updateGeneralProfile($userId, $name, $email, $phone, $bio, $avatarPath);
 
-            if (!$stmt->execute()) {
-                $_SESSION['settings_error'] = "Failed to update profile settings: " . $this->db->error;
+            if (!$success) {
+                $_SESSION['settings_error'] = "Failed to update profile settings.";
                 $_SESSION['settings_active_tab'] = "general";
-                $stmt->close();
                 $this->redirect('/settings');
             }
-            $stmt->close();
 
             // Update session values
             $_SESSION['user_name'] = $name;
@@ -282,34 +254,20 @@ class ProfileController extends Controller {
                 $officeHours = $request->cleanPost('office_hours');
                 $specialization = $request->cleanPost('specialization');
 
-                $updateQuery = "
-                    UPDATE teachers SET 
-                        department_id = ?, title = ?, office_hours = ?, specialization = ?
-                    WHERE user_id = ?
-                ";
-                $stmt = $this->db->prepare($updateQuery);
-                $stmt->bind_param("isssi", $departmentId, $title, $officeHours, $specialization, $userId);
+                $success = $this->userModel->updateTeacherProfile($userId, $departmentId, $title, $officeHours, $specialization);
             } else {
                 $studentId = $request->cleanPost('student_id');
                 $expectedGraduation = $request->cleanPost('expected_graduation');
                 $studyStyle = $request->cleanPost('study_style');
 
-                $updateQuery = "
-                    UPDATE students SET 
-                        department_id = ?, student_id = ?, expected_graduation = ?, study_style = ?
-                    WHERE user_id = ?
-                ";
-                $stmt = $this->db->prepare($updateQuery);
-                $stmt->bind_param("isssi", $departmentId, $studentId, $expectedGraduation, $studyStyle, $userId);
+                $success = $this->userModel->updateStudentProfile($userId, $departmentId, $studentId, $expectedGraduation, $studyStyle);
             }
 
-            if (!$stmt->execute()) {
-                $_SESSION['settings_error'] = "Failed to update academic/professional settings: " . $this->db->error;
+            if (!$success) {
+                $_SESSION['settings_error'] = "Failed to update academic/professional settings.";
                 $_SESSION['settings_active_tab'] = $role === 'teacher' ? 'teacher-profile' : 'student-profile';
-                $stmt->close();
                 $this->redirect('/settings');
             }
-            $stmt->close();
 
             // Update many-to-many relationship mapping for dynamic subjects checkmarks
             $checkedSubjectIds = isset($_POST['subjects']) ? array_map('intval', $_POST['subjects']) : [];
@@ -377,16 +335,11 @@ class ProfileController extends Controller {
             $this->redirect('/settings');
         }
 
-        // Fetch original password hash to verify
-        $stmt = $this->db->prepare("SELECT password FROM users WHERE id = ?");
-        $stmt->bind_param("i", $userId);
-        $stmt->execute();
-        $res = $stmt->get_result();
-        if ($res->num_rows !== 1) {
+        $user = $this->userModel->findByEmail($_SESSION['user_email']);
+        
+        if (!$user) {
             die("User details not found.");
         }
-        $user = $res->fetch_assoc();
-        $stmt->close();
 
         if (!password_verify($currentPassword, $user['password'])) {
             $_SESSION['settings_error'] = "Current password is incorrect.";
@@ -396,15 +349,13 @@ class ProfileController extends Controller {
 
         // Hashing and UPDATE execution
         $newHash = password_hash($newPassword, PASSWORD_DEFAULT);
-        $upStmt = $this->db->prepare("UPDATE users SET password = ? WHERE id = ?");
-        $upStmt->bind_param("si", $newHash, $userId);
+        $success = $this->userModel->updatePassword($userId, $newHash);
         
-        if ($upStmt->execute()) {
+        if ($success) {
             $_SESSION['settings_success'] = "Password changed successfully.";
         } else {
-            $_SESSION['settings_error'] = "Failed to update password: " . $this->db->error;
+            $_SESSION['settings_error'] = "Failed to update password.";
         }
-        $upStmt->close();
 
         $_SESSION['settings_active_tab'] = "security";
         $this->redirect('/settings');
@@ -429,19 +380,13 @@ class ProfileController extends Controller {
         $notifyClassAlerts = isset($_POST['notify_class_alerts']) ? 1 : 0;
         $notifyMarketing = isset($_POST['notify_marketing']) ? 1 : 0;
 
-        $stmt = $this->db->prepare("
-            UPDATE users 
-            SET notify_email = ?, notify_class_alerts = ?, notify_marketing = ? 
-            WHERE id = ?
-        ");
-        $stmt->bind_param("iiii", $notifyEmail, $notifyClassAlerts, $notifyMarketing, $userId);
+        $success = $this->userModel->updateNotificationSettings($userId, $notifyEmail, $notifyClassAlerts, $notifyMarketing);
 
-        if ($stmt->execute()) {
+        if ($success) {
             $_SESSION['settings_success'] = "Notification preferences updated.";
         } else {
-            $_SESSION['settings_error'] = "Failed to update notification settings: " . $this->db->error;
+            $_SESSION['settings_error'] = "Failed to update notification settings.";
         }
-        $stmt->close();
 
         $_SESSION['settings_active_tab'] = "notifications";
         $this->redirect('/settings');

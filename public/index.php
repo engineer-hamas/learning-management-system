@@ -25,6 +25,7 @@ use App\Controllers\DashboardController;
 use App\Controllers\ProfileController;
 use App\Controllers\EnrollmentController;
 use App\Controllers\CourseController;
+use App\Controllers\AdminController;
 
 // 4. Initialize Programmatic OOP Router
 $router = new Router();
@@ -44,14 +45,18 @@ $router->get('/', function($request, $response) {
 $router->get('/login', [AuthController::class, 'showLogin']);
 $router->post('/login', [AuthController::class, 'handleLogin']);
 
-$router->get('/register', [AuthController::class, 'showRegister']);
-$router->post('/register', [AuthController::class, 'handleRegister']);
-
 $router->get('/logout', [AuthController::class, 'handleLogout']);
 $router->post('/logout', [AuthController::class, 'handleLogout']);
 
 // Dashboard Route
 $router->get('/dashboard', [DashboardController::class, 'index']);
+
+// Admin Routes
+$router->get('/admin', [AdminController::class, 'dashboard']);
+$router->get('/admin/users/create', [AdminController::class, 'showCreateUser']);
+$router->post('/admin/users/create', [AdminController::class, 'handleCreateUser']);
+$router->get('/admin/courses/create', [AdminController::class, 'showCreateCourse']);
+$router->post('/admin/courses/create', [AdminController::class, 'handleCreateCourse']);
 
 // Enrollments Routes
 $router->get('/enrollments', [EnrollmentController::class, 'index']);

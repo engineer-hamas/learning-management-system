@@ -5,12 +5,20 @@ use App\Core\Controller;
 use App\Core\Database;
 use App\Core\Request;
 use App\Core\Response;
+use App\Models\User;
+use App\Models\Course;
+use App\Models\Enrollment;
 
 class EnrollmentController extends Controller {
-    private $db;
+    private User $userModel;
+    private Course $courseModel;
+    private Enrollment $enrollmentModel;
 
     public function __construct() {
-        $this->db = Database::getConnection();
+        $this->userModel = new User();
+        $this->courseModel = new Course();
+        $this->enrollmentModel = new Enrollment();
+        
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
@@ -33,69 +41,22 @@ class EnrollmentController extends Controller {
         ];
 
         // Fetch fresh avatar_path
-        $stmt = $this->db->prepare("SELECT avatar_path FROM users WHERE id = ?");
-        $stmt->bind_param("i", $userId);
-        $stmt->execute();
-        $res = $stmt->get_result();
-        $data['userAvatar'] = ($res && $res->num_rows > 0) ? $res->fetch_assoc()['avatar_path'] : null;
-        $stmt->close();
+        $user = $this->userModel->findById($userId);
+        $data['userAvatar'] = $user['avatar_path'] ?? null;
 
         if ($role === 'teacher') {
-            // Get all subjects this teacher teaches
-            $stmt = $this->db->prepare("
-                SELECT s.id, s.name, s.code 
-                FROM subjects s
-                JOIN teacher_subjects ts ON s.id = ts.subject_id
-                WHERE ts.teacher_id = ?
-            ");
-            $stmt->bind_param("i", $userId);
-            $stmt->execute();
-            $subjectsResult = $stmt->get_result();
+            $teacherSubjects = $this->courseModel->getTaughtCourses($userId);
             
-            while ($subject = $subjectsResult->fetch_assoc()) {
-                $subjectId = $subject['id'];
-                // Get students enrolled in this subject
-                $enrolledStmt = $this->db->prepare("
-                    SELECT u.id, u.name, u.email, e.enrolled_at
-                    FROM users u
-                    JOIN enrollments e ON u.id = e.student_id
-                    WHERE e.subject_id = ?
-                ");
-                $enrolledStmt->bind_param("i", $subjectId);
-                $enrolledStmt->execute();
-                $enrolledRes = $enrolledStmt->get_result();
-                $subject['enrolled'] = [];
-                while ($student = $enrolledRes->fetch_assoc()) {
-                    $subject['enrolled'][] = $student;
-                }
-                $enrolledStmt->close();
-                
-                $data['teacherSubjects'][] = $subject;
+            foreach ($teacherSubjects as &$subject) {
+                $subject['enrolled'] = $this->enrollmentModel->getEnrolledStudents($subject['id']);
             }
-            $stmt->close();
+            $data['teacherSubjects'] = $teacherSubjects;
             
             // Fetch all students for the dropdown
-            $stuRes = $this->db->query("SELECT id, name, email FROM users WHERE role = 'student'");
-            if ($stuRes) {
-                while ($stu = $stuRes->fetch_assoc()) {
-                    $data['allStudents'][] = $stu;
-                }
-            }
+            $data['allStudents'] = $this->userModel->getByRole('student');
         } else {
             // Student: Get their enrolled subjects
-            $stmt = $this->db->prepare("
-                SELECT s.id, s.name, s.code, e.enrolled_at
-                FROM subjects s
-                JOIN enrollments e ON s.id = e.subject_id
-                WHERE e.student_id = ?
-            ");
-            $stmt->bind_param("i", $userId);
-            $stmt->execute();
-            $enrolledResult = $stmt->get_result();
-            while ($row = $enrolledResult->fetch_assoc()) {
-                $data['studentEnrollments'][] = $row;
-            }
-            $stmt->close();
+            $data['studentEnrollments'] = $this->courseModel->getEnrolledCourses($userId);
         }
 
         $data['error'] = $_SESSION['enroll_error'] ?? '';
@@ -120,31 +81,21 @@ class EnrollmentController extends Controller {
         }
 
         // Verify teacher actually teaches this subject
-        $checkStmt = $this->db->prepare("SELECT 1 FROM teacher_subjects WHERE teacher_id = ? AND subject_id = ?");
-        $checkStmt->bind_param("ii", $teacherId, $subjectId);
-        $checkStmt->execute();
-        $isTeaching = $checkStmt->get_result()->num_rows > 0;
-        $checkStmt->close();
-
-        if (!$isTeaching) {
+        if (!$this->courseModel->verifyTeacherAccess($teacherId, $subjectId)) {
             $_SESSION['enroll_error'] = "You do not have permission to enroll students in this subject.";
             $this->redirect('/enrollments');
         }
 
         // Enroll
-        $insStmt = $this->db->prepare("INSERT IGNORE INTO enrollments (student_id, subject_id) VALUES (?, ?)");
-        $insStmt->bind_param("ii", $studentId, $subjectId);
-        
-        if ($insStmt->execute()) {
-            if ($insStmt->affected_rows > 0) {
+        if ($this->enrollmentModel->isEnrolled($studentId, $subjectId)) {
+            $_SESSION['enroll_error'] = "Student is already enrolled in this subject.";
+        } else {
+            if ($this->enrollmentModel->enrollStudent($studentId, $subjectId)) {
                 $_SESSION['enroll_success'] = "Student successfully enrolled.";
             } else {
-                $_SESSION['enroll_error'] = "Student is already enrolled in this subject.";
+                $_SESSION['enroll_error'] = "Failed to enroll student.";
             }
-        } else {
-            $_SESSION['enroll_error'] = "Failed to enroll student.";
         }
-        $insStmt->close();
         $redirectUrl = $_SERVER['HTTP_REFERER'] ?? '/enrollments';
         $this->redirect($redirectUrl);
     }
@@ -164,26 +115,16 @@ class EnrollmentController extends Controller {
         }
 
         // Verify teacher actually teaches this subject
-        $checkStmt = $this->db->prepare("SELECT 1 FROM teacher_subjects WHERE teacher_id = ? AND subject_id = ?");
-        $checkStmt->bind_param("ii", $teacherId, $subjectId);
-        $checkStmt->execute();
-        $isTeaching = $checkStmt->get_result()->num_rows > 0;
-        $checkStmt->close();
-
-        if (!$isTeaching) {
+        if (!$this->courseModel->verifyTeacherAccess($teacherId, $subjectId)) {
             $_SESSION['enroll_error'] = "You do not have permission to remove students from this subject.";
             $this->redirect('/enrollments');
         }
 
-        $delStmt = $this->db->prepare("DELETE FROM enrollments WHERE student_id = ? AND subject_id = ?");
-        $delStmt->bind_param("ii", $studentId, $subjectId);
-        
-        if ($delStmt->execute()) {
+        if ($this->enrollmentModel->unenrollStudent($studentId, $subjectId)) {
             $_SESSION['enroll_success'] = "Student successfully removed from the course.";
         } else {
             $_SESSION['enroll_error'] = "Failed to remove student.";
         }
-        $delStmt->close();
         $redirectUrl = $_SERVER['HTTP_REFERER'] ?? '/enrollments';
         $this->redirect($redirectUrl);
     }

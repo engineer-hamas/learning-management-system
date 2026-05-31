@@ -34,7 +34,6 @@
     </form>
 
     <div class="auth-footer">
-      <p>Don't have an account? <a href="/register">Create an account</a></p>
     </div>
   </div>
 </div>

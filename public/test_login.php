@@ -1,0 +1,1 @@
+<?php require "../config/config.php"; require "../src/Core/Database/Connection.php"; $db = App\Core\Database\Connection::get(); $res = $db->query("SELECT * FROM users"); $users = []; while($row = $res->fetch_assoc()) { $users[] = $row; } echo json_encode($users); ?>

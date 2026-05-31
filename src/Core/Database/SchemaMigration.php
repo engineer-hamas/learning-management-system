@@ -39,7 +39,7 @@ class SchemaMigration {
                 `name` VARCHAR(100) NOT NULL,
                 `email` VARCHAR(100) NOT NULL UNIQUE,
                 `password` VARCHAR(255) NOT NULL,
-                `role` ENUM('student', 'teacher') NOT NULL DEFAULT 'student',
+                `role` ENUM('student', 'teacher', 'admin') NOT NULL DEFAULT 'student',
                 `avatar_path` VARCHAR(255) DEFAULT NULL,
                 `phone` VARCHAR(20) DEFAULT NULL,
                 `bio` TEXT DEFAULT NULL,

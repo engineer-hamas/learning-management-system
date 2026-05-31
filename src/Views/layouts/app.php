@@ -35,12 +35,21 @@
         <a href="/dashboard" class="menu-item <?= (strpos($_SERVER['REQUEST_URI'] ?? '', '/dashboard') !== false) ? 'active' : '' ?>" data-tooltip="Dashboard">
           <span class="icon">🏠</span> <span class="menu-text">Dashboard</span>
         </a>
+        <?php if (($userRole ?? '') !== 'admin'): ?>
         <a href="/enrollments" class="menu-item <?= (strpos($_SERVER['REQUEST_URI'] ?? '', '/enrollments') !== false || strpos($_SERVER['REQUEST_URI'] ?? '', '/course') !== false) ? 'active' : '' ?>" data-tooltip="<?= e($userRole ?? 'student') === 'teacher' ? 'Enrollments' : 'Courses' ?>">
           <span class="icon">🎓</span> <span class="menu-text"><?= e($userRole ?? 'student') === 'teacher' ? 'Enrollments' : 'Courses' ?></span>
         </a>
+        <?php endif; ?>
+        <?php if (($userRole ?? '') === 'admin'): ?>
+        <a href="/admin" class="menu-item <?= (strpos($_SERVER['REQUEST_URI'] ?? '', '/admin') !== false) ? 'active' : '' ?>" data-tooltip="Admin Panel">
+          <span class="icon">🛡️</span> <span class="menu-text">Admin Panel</span>
+        </a>
+        <?php endif; ?>
+        <?php if (($userRole ?? '') !== 'admin'): ?>
         <a href="/settings" class="menu-item <?= (strpos($_SERVER['REQUEST_URI'] ?? '', '/settings') !== false) ? 'active' : '' ?>" data-tooltip="Settings">
           <span class="icon">⚙️</span> <span class="menu-text">Settings</span>
         </a>
+        <?php endif; ?>
       </nav>
       <div class="sidebar-footer">
         <a href="/logout" class="menu-item logout" data-tooltip="Logout">

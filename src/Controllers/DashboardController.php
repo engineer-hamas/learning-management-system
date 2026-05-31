@@ -5,12 +5,19 @@ use App\Core\Controller;
 use App\Core\Request;
 use App\Core\Response;
 
+use App\Models\User;
+
 /**
  * Class DashboardController
  * 
  * Handles rendering the main workspace dashboard view for students/teachers.
  */
 class DashboardController extends Controller {
+    private User $userModel;
+
+    public function __construct() {
+        $this->userModel = new User();
+    }
     /**
      * Show primary dashboard interface
      * 
@@ -23,18 +30,9 @@ class DashboardController extends Controller {
             $this->redirect('/login');
         }
 
-        // Fetch fresh avatar_path from DB to keep it always accurate
-        $db = \App\Core\Database::getConnection();
-        $stmt = $db->prepare("SELECT avatar_path FROM users WHERE id = ?");
-        $stmt->bind_param("i", $_SESSION['user_id']);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $userAvatar = null;
-        if ($result && $result->num_rows === 1) {
-            $user = $result->fetch_assoc();
-            $userAvatar = $user['avatar_path'];
-        }
-        $stmt->close();
+        // Fetch fresh avatar_path from DB
+        $user = $this->userModel->findById($_SESSION['user_id']);
+        $userAvatar = $user['avatar_path'] ?? null;
 
         // Render using modern base view templates and extract data params
         $this->render('dashboard', [
