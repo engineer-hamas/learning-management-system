@@ -22,7 +22,7 @@
   "scripts": {
     "build:css": "sass src/scss/style.scss public/css/style.css --no-source-map",
     "watch:css": "sass --watch src/scss/style.scss public/css/style.css --no-source-map",
-    "dev": "bun run watch:css & php -S localhost:8000 -t public/",
+    "dev": "php scripts/reset-db.php && bun run watch:css & php -S localhost:8000 -t public/",
     "lint:php": "find src/ -name '*.php' -exec php -l {} \\; && php -l public/index.php",
     "lint": "bun run lint:php"
   },
