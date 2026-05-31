@@ -61,4 +61,21 @@ class Enrollment extends Model {
         $stmt->close();
         return $success;
     }
+
+    /**
+     * Count total students enrolled across all courses taught by a teacher
+     */
+    public function countTotalStudentsByTeacher(int $teacherId): int {
+        $stmt = $this->db->prepare("
+            SELECT COUNT(DISTINCT e.student_id) as count 
+            FROM enrollments e 
+            JOIN teacher_subjects ts ON e.subject_id = ts.subject_id 
+            WHERE ts.teacher_id = ?
+        ");
+        $stmt->bind_param("i", $teacherId);
+        $stmt->execute();
+        $count = $stmt->get_result()->fetch_assoc()['count'] ?? 0;
+        $stmt->close();
+        return (int)$count;
+    }
 }

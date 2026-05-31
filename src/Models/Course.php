@@ -104,4 +104,28 @@ class Course extends Model {
         $stmt->close();
         return $newCourseId;
     }
+
+    /**
+     * Count total courses assigned to a teacher
+     */
+    public function countByTeacher(int $teacherId): int {
+        $stmt = $this->db->prepare("SELECT COUNT(*) as count FROM teacher_subjects WHERE teacher_id = ?");
+        $stmt->bind_param("i", $teacherId);
+        $stmt->execute();
+        $count = $stmt->get_result()->fetch_assoc()['count'] ?? 0;
+        $stmt->close();
+        return (int)$count;
+    }
+
+    /**
+     * Count total courses a student is enrolled in
+     */
+    public function countEnrolledByStudent(int $studentId): int {
+        $stmt = $this->db->prepare("SELECT COUNT(*) as count FROM enrollments WHERE student_id = ?");
+        $stmt->bind_param("i", $studentId);
+        $stmt->execute();
+        $count = $stmt->get_result()->fetch_assoc()['count'] ?? 0;
+        $stmt->close();
+        return (int)$count;
+    }
 }

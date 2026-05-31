@@ -120,4 +120,48 @@ class CourseMaterial extends Model {
         $stmt->close();
         return $success;
     }
+
+    // ==========================================
+    // Aggregations
+    // ==========================================
+
+    /**
+     * Get recent materials across all courses a student is enrolled in
+     */
+    public function getRecentForStudent(int $studentId, int $limit = 5): array {
+        $stmt = $this->db->prepare("
+            SELECT cm.id, cm.title, cm.file_path, cm.created_at, s.name as course_name, 'Material' as type 
+            FROM course_materials cm
+            JOIN enrollments e ON cm.subject_id = e.subject_id
+            JOIN subjects s ON cm.subject_id = s.id
+            WHERE e.student_id = ?
+            ORDER BY cm.created_at DESC
+            LIMIT ?
+        ");
+        $stmt->bind_param("ii", $studentId, $limit);
+        $stmt->execute();
+        $items = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $items;
+    }
+
+    /**
+     * Get recent materials uploaded by a teacher across all their courses
+     */
+    public function getRecentByTeacher(int $teacherId, int $limit = 5): array {
+        $stmt = $this->db->prepare("
+            SELECT cm.id, cm.title, cm.file_path, cm.created_at, s.name as course_name, 'Material' as type 
+            FROM course_materials cm
+            JOIN teacher_subjects ts ON cm.subject_id = ts.subject_id
+            JOIN subjects s ON cm.subject_id = s.id
+            WHERE ts.teacher_id = ?
+            ORDER BY cm.created_at DESC
+            LIMIT ?
+        ");
+        $stmt->bind_param("ii", $teacherId, $limit);
+        $stmt->execute();
+        $items = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $items;
+    }
 }
