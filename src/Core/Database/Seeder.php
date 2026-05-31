@@ -83,11 +83,15 @@ class Seeder {
                 ['Student Three', 'student3@example.com', 'student']
             ];
 
+            $name = '';
+            $email = '';
+            $role = '';
+            $stmt->bind_param("ssss", $name, $email, $hashedPassword, $role);
+
             foreach ($users as $u) {
                 $name = $u[0];
                 $email = $u[1];
                 $role = $u[2];
-                $stmt->bind_param("ssss", $name, $email, $hashedPassword, $role);
                 $stmt->execute();
                 
                 $userId = $stmt->insert_id;

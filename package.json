@@ -11,6 +11,7 @@
     "is-glob": "^4.0.3",
     "node-addon-api": "^7.1.1",
     "picomatch": "^4.0.4",
+    "puppeteer": "^25.1.0",
     "readdirp": "^4.1.2",
     "sass": "^1.99.0",
     "source-map-js": "^1.2.1"

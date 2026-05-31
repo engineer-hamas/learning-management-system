@@ -128,4 +128,26 @@ class Course extends Model {
         $stmt->close();
         return (int)$count;
     }
+
+    /**
+     * Update an existing course
+     */
+    public function update(int $id, int $departmentId, string $name, string $code, string $description, int $credits): bool {
+        $stmt = $this->db->prepare("UPDATE subjects SET department_id = ?, name = ?, code = ?, description = ?, credits = ? WHERE id = ?");
+        $stmt->bind_param("isssii", $departmentId, $name, $code, $description, $credits, $id);
+        $success = $stmt->execute();
+        $stmt->close();
+        return $success;
+    }
+
+    /**
+     * Delete a course (will cascade and delete related enrollments, materials, etc.)
+     */
+    public function delete(int $id): bool {
+        $stmt = $this->db->prepare("DELETE FROM subjects WHERE id = ?");
+        $stmt->bind_param("i", $id);
+        $success = $stmt->execute();
+        $stmt->close();
+        return $success;
+    }
 }

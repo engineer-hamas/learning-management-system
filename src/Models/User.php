@@ -185,4 +185,34 @@ class User extends Model {
         $stmt->close();
         return $success;
     }
+
+    /**
+     * Get all users except admins
+     */
+    public function getAllNonAdmins(): array {
+        $result = $this->db->query("SELECT id, name, email, role, created_at FROM users WHERE role != 'admin' ORDER BY created_at DESC");
+        return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+    }
+
+    /**
+     * Delete user securely via cascading
+     */
+    public function delete(int $id): bool {
+        $stmt = $this->db->prepare("DELETE FROM users WHERE id = ?");
+        $stmt->bind_param("i", $id);
+        $success = $stmt->execute();
+        $stmt->close();
+        return $success;
+    }
+
+    /**
+     * Update base user record from admin panel
+     */
+    public function adminUpdateUser(int $id, string $name, string $email, string $role): bool {
+        $stmt = $this->db->prepare("UPDATE users SET name = ?, email = ?, role = ? WHERE id = ?");
+        $stmt->bind_param("sssi", $name, $email, $role, $id);
+        $success = $stmt->execute();
+        $stmt->close();
+        return $success;
+    }
 }

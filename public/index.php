@@ -53,8 +53,16 @@ $router->get('/dashboard', [DashboardController::class, 'index']);
 
 // Admin Routes
 $router->get('/admin', [AdminController::class, 'dashboard']);
+$router->get('/admin/users', [AdminController::class, 'listUsers']);
+$router->get('/admin/users/edit', [AdminController::class, 'showEditUser']);
+$router->post('/admin/users/edit', [AdminController::class, 'handleEditUser']);
+$router->post('/admin/users/delete', [AdminController::class, 'handleDeleteUser']);
 $router->get('/admin/users/create', [AdminController::class, 'showCreateUser']);
 $router->post('/admin/users/create', [AdminController::class, 'handleCreateUser']);
+$router->get('/admin/courses', [AdminController::class, 'listCourses']);
+$router->get('/admin/courses/edit', [AdminController::class, 'showEditCourse']);
+$router->post('/admin/courses/edit', [AdminController::class, 'handleEditCourse']);
+$router->post('/admin/courses/delete', [AdminController::class, 'handleDeleteCourse']);
 $router->get('/admin/courses/create', [AdminController::class, 'showCreateCourse']);
 $router->post('/admin/courses/create', [AdminController::class, 'handleCreateCourse']);
 

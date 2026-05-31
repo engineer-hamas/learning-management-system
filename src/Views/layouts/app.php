@@ -32,9 +32,11 @@
         </div>
       </div>
       <nav class="sidebar-menu">
+        <?php if (($userRole ?? '') !== 'admin'): ?>
         <a href="/dashboard" class="menu-item <?= (strpos($_SERVER['REQUEST_URI'] ?? '', '/dashboard') !== false) ? 'active' : '' ?>" data-tooltip="Dashboard">
           <span class="icon">🏠</span> <span class="menu-text">Dashboard</span>
         </a>
+        <?php endif; ?>
         <?php if (($userRole ?? '') !== 'admin'): ?>
         <a href="/enrollments" class="menu-item <?= (strpos($_SERVER['REQUEST_URI'] ?? '', '/enrollments') !== false || strpos($_SERVER['REQUEST_URI'] ?? '', '/course') !== false) ? 'active' : '' ?>" data-tooltip="<?= e($userRole ?? 'student') === 'teacher' ? 'Enrollments' : 'Courses' ?>">
           <span class="icon">🎓</span> <span class="menu-text"><?= e($userRole ?? 'student') === 'teacher' ? 'Enrollments' : 'Courses' ?></span>

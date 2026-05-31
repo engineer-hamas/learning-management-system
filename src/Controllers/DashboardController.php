@@ -41,6 +41,10 @@ class DashboardController extends Controller {
         $userRole = $_SESSION['user_role'];
         $userId = $_SESSION['user_id'];
 
+        if ($userRole === 'admin') {
+            $this->redirect('/admin');
+        }
+
         $viewData = [
             'userRole' => $userRole,
             'userName' => $_SESSION['user_name'],

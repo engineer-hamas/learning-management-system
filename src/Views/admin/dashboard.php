@@ -1,6 +1,14 @@
 <?php include __DIR__ . '/../components/common/page-header.php'; ?>
 
-<div class="summary-cards-grid">
+<div class="dashboard-container">
+  <div class="welcome-card animated-fade-in glass-card" style="margin-bottom: 2rem;">
+    <h1>Welcome, <?= e($userName) ?>!</h1>
+    <p style="color: #64748b; margin-top: 5px; font-size: 1.05rem;">
+      Here is the overall status of the LMS platform.
+    </p>
+  </div>
+
+  <div class="summary-cards-grid">
   <!-- Stats Cards -->
   <div class="summary-card-secondary animated-fade-in" style="animation-delay: 0.1s">
     <div class="stat-icon" style="font-size: 2rem; margin-bottom: 10px;">👨‍🏫</div>
@@ -27,7 +35,8 @@
     <p style="color: var(--color-text-muted); font-size: 0.95rem;">Manage your platform's users and curriculum.</p>
   </div>
   <div style="display: flex; gap: 1rem;">
-    <a href="/admin/users/create" class="btn-enroll-submit" style="text-decoration: none; padding: 12px 24px;">➕ Create User</a>
-    <a href="/admin/courses/create" class="btn-remove-enrollment" style="text-decoration: none; padding: 12px 24px; border-color: #cbd5e1; background: #f8fafc; color: #334155;">➕ Create Course</a>
+    <a href="/admin/users" class="btn-enroll-submit" style="text-decoration: none; padding: 12px 24px;">👥 Manage Users</a>
+    <a href="/admin/courses" class="btn-remove-enrollment" style="text-decoration: none; padding: 12px 24px; border-color: #cbd5e1; background: #f8fafc; color: #334155;">📚 Manage Courses</a>
   </div>
+</div>
 </div>
