@@ -10,6 +10,7 @@ node_modules/
 .idea/
 .vscode/
 *.swp
+*.patch
 
 # Ignore OS generated files
 .DS_Store
