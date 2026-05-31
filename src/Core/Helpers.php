@@ -1,6 +1,4 @@
 <?php
-namespace App\Core;
-
 /**
  * Global helper functions for the LMS application.
  *

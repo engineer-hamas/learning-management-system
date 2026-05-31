@@ -190,7 +190,7 @@ class User extends Model {
      * Get all users except admins
      */
     public function getAllNonAdmins(): array {
-        $result = $this->db->query("SELECT id, name, email, role, created_at FROM users WHERE role != 'admin' ORDER BY created_at DESC");
+        $result = $this->db->query("SELECT id, name, email, role, created_at FROM users WHERE role != 'admin' ORDER BY created_at DESC, id DESC");
         return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
     }
 
