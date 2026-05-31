@@ -13,7 +13,7 @@ if (php_sapi_name() === 'cli-server') {
 require_once __DIR__ . '/../config/config.php';
 
 // 2. Load globally available helper functions
-require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/../src/Core/Helpers.php';
 
 // 3. Register custom PSR-4 autoloader
 require_once __DIR__ . '/../src/Core/Autoloader.php';

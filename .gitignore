@@ -15,15 +15,9 @@ node_modules/
 .DS_Store
 Thumbs.db
 
-# Ignore environment variables
-.env
-.env.local
+# Ignore user uploads
+public/uploads/
 
-# Ignore IDE specific files
-.idea/
-.vscode/
-*.swp
-
-# Ignore OS generated files
-.DS_Store
-Thumbs.db
+# Ignore generated test artifacts
+tests/screenshots/
+tests/error_page.html
